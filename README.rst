@@ -3,7 +3,7 @@ XWING
 
 Blazing fast Python 3 multiplexing and communication library.
 
-Bootstraping::
+Bootstraping:
 
 	pyvenv env
 	source env/bin/activate
