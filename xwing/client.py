@@ -16,10 +16,18 @@ class Client:
 
         self._socket = self._setup()
 
-    def send(self, server, payload):
-        payload = bytes(payload, 'utf-8') + server
+    def dispatch(self, proxy, payload, server):
+        if proxy is None or proxy == self.endpoint:
+            self._socket.send_multipart([payload, server])
+        else:
+            self._socket.send_multipart([payload, server, proxy])
+
+    def send(self, server, payload, proxy=None, raw=False):
+        if not raw:
+            payload = payload + server
+
         retries_left = REQUEST_RETRIES
-        self._socket.send_multipart([payload, server])
+        self.dispatch(proxy, payload, server)
 
         expect_reply = True
         while expect_reply:
@@ -32,6 +40,7 @@ class Client:
                 if reply == payload:
                     retries_left = REQUEST_RETRIES
                     expect_reply = False
+                    return reply
                 else:
                     print("E: Malformed reply from server: %s" % reply)
             else:
@@ -49,14 +58,12 @@ class Client:
                 print("I: Reconnecting and resending")
                 # Create new connection
                 self._socket = self._setup()
-                self._socket.send_multipart([payload, server])
+                self.dispatch(proxy, payload, server)
 
     def _setup(self):
-        print("I: Connecting to server...")
         socket = self._context.socket(zmq.REQ)
-        socket.setsockopt_string(zmq.IDENTITY, self.identity)
+        socket.setsockopt(zmq.IDENTITY, self.identity)
 
         self._poller.register(socket, zmq.POLLIN)
-        print(self.endpoint)
         socket.connect(self.endpoint)
         return socket

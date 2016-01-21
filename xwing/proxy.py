@@ -1,6 +1,10 @@
 import time
+import uuid
 
 import zmq
+
+from xwing.client import Client
+
 
 PPP_READY = b"\x01"  # Signals worker is ready
 PPP_HEARTBEAT = b"\x02"  # Signals worker heartbeat
@@ -43,8 +47,16 @@ class Proxy:
             if socks.get(frontend) == zmq.POLLIN:
                 # Get client request, route to server
                 message = frontend.recv_multipart()
-                request = [message.pop(-1), b''] + message
-                backend.send_multipart(request)
+                if len(message) > 4:
+                    proxy = message.pop(-1)
+                    server = message.pop(-1)
+                    client = Client(proxy, bytes(str(uuid.uuid1()), 'utf-8'))
+                    reply = client.send(server, message[2], raw=True)
+                    if reply:
+                        frontend.send_multipart([message[0], b'', reply])
+                else:
+                    request = [message.pop(-1), b''] + message
+                    backend.send_multipart(request)
 
             if socks.get(backend) == zmq.POLLIN:
                 message = backend.recv_multipart()
