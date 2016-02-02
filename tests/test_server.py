@@ -6,9 +6,8 @@ sys.path.append('.')
 
 import pytest
 
-from xwing.client import Client
-from xwing.proxy import Proxy
-from xwing.server import Server, NoData
+from xwing import Client, Proxy, Server
+from xwing.server import NoData
 
 
 def setup_module():
