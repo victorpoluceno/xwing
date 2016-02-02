@@ -1,6 +1,8 @@
 XWing
 =====
 
+Multiplexing, fowarding, route.
+
 Requirements
 ============
 
@@ -58,3 +60,8 @@ In this sense, the communication is always at least once. To change that behavio
 The retry implementation and the send and recv semantics does not offer a non blocking API for now. [FUTURE]
 
 The client to proxy connections short lived, once the progtams send and receives and answer the connections is closed.
+
+TODO
+----
+
+- Implement server to proxy heartbeat

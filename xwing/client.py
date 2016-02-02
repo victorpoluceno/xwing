@@ -1,4 +1,4 @@
-import zmq
+import zmq.green as zmq
 
 
 REQUEST_RETRIES = 3
@@ -22,10 +22,11 @@ class Client:
         else:
             self._socket.send_multipart([payload, server, proxy])
 
-    def send(self, server, payload, proxy=None, raw=False):
+    def send(self, server, payload, proxy=None, raw=True):
         if not raw:
             payload = payload + server
 
+        payload, server = bytes(payload, 'utf-8'), bytes(server, 'utf-8')
         retries_left = REQUEST_RETRIES
         self.dispatch(proxy, payload, server)
 
@@ -62,7 +63,7 @@ class Client:
 
     def _setup(self):
         socket = self._context.socket(zmq.REQ)
-        socket.setsockopt(zmq.IDENTITY, self.identity)
+        socket.setsockopt_string(zmq.IDENTITY, self.identity)
 
         self._poller.register(socket, zmq.POLLIN)
         socket.connect(self.endpoint)

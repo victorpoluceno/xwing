@@ -1,7 +1,11 @@
+import gevent
+from gevent import monkey
+monkey.patch_all()
+
 import time
 import uuid
 
-import zmq
+import zmq.green as zmq
 
 from xwing.client import Client
 
@@ -18,7 +22,16 @@ class Proxy:
         self.frontend_endpoint = frontend_endpoint
         self.backend_endpoint = backend_endpoint
 
-    def start(self):
+    def run(self):
+        '''Run the server loop'''
+        self._greenlet_loop = gevent.spawn(self._run_zmq_poller)
+        gevent.sleep(0)  # forces the greenlet to be scheduled
+
+    def join(self):
+        ''''Join the server loop, this will block until loop ends'''
+        self._greenlet_loop.join()
+
+    def _run_zmq_poller(self):
         context = zmq.Context()
 
         frontend = context.socket(zmq.ROUTER)
