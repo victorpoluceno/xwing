@@ -1,6 +1,17 @@
 XWing
 =====
 
+Requirements
+============
+
+- Implement a MULTIPLEX process, that knowns how to ROUTE messages to its local connected PEERS and answer back to CLIENTS.
+
+- Be able to implement HEARTBEATS between the MULTIPLEX process and the LOCAL connected peers, in both ways.
+
+- Capacity to have persistent connections between CLIENTS and the MULTIPLEX process.
+
+- The MULTIPLEX process must knonw how to send requests from it's local PEERS to others MULTIPLEX process.
+
 Proxy
 -----
 
