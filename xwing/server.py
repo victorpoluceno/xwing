@@ -24,11 +24,13 @@ class Server(object):
     for heartbeats from proxy and reconnects to the Proxy if to many
     heartbeats are missing.
 
-    :param multiplex: Multiplex server address to connect.
-    :type multiplex: str
-    :param identity: Unique server identification. If not set uuid1 will be used.
+    :param multiplex_endpoint: Multiplex server address to connect.
+    :type multiplex_endpoint: str
+    :param identity: Unique server identification. If not set uuid1 will be
+    used.
     :type identity: str
-    :param heartbeat_interval: Interval which heartbeat will be checked in seconds.
+    :param heartbeat_interval: Interval which heartbeat will be checked in
+    seconds.
     :param heartbeat_liveness: Number of hearbeats that may be missed before
     reconnecting.
     :param reconnect_interval: number of seconds to wait before reconnecting.
@@ -38,15 +40,15 @@ class Server(object):
     Usage::
 
       >>> from xwing.server import Server
-      >>> server = Server('ipc:///tmp/0')
+      >>> server = Server('ipc:///tmp/0', 'server0')
       >>> server.run()
       >>> server.join()
     '''
 
-    def __init__(self, multiplex, identity=None, heartbeat_interval=1,
+    def __init__(self, multiplex_endpoint, identity=None, heartbeat_interval=1,
                  heartbeat_liveness=3, reconnect_interval=1,
                  reconnect_max_interval=32):
-        self.multiplex = multiplex
+        self.multiplex_endpoint = multiplex_endpoint
         self.identity = str(uuid.uuid1()) if not identity else identity
         self.heartbeat_interval = heartbeat_interval
         self.heartbeat_liveness = heartbeat_liveness
@@ -88,7 +90,7 @@ class Server(object):
         self._socket = socket = self._context.socket(zmq.DEALER)
         self._poller.register(socket, zmq.POLLIN)
         socket.setsockopt_string(zmq.IDENTITY, self.identity)
-        socket.connect(self.multiplex)
+        socket.connect(self.multiplex_endpoint)
 
         log.info("(%s) server ready" % self.identity)
         socket.send(SIGNAL_READY)

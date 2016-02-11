@@ -17,3 +17,9 @@ http://zguide.zeromq.org/page:all#Robust-Reliable-Queuing-Paranoid-Pirate-Patter
 http://zguide.zeromq.org/py:lpclient
 http://zguide.zeromq.org/py:ppqueue
 http://zguide.zeromq.org/py:ppworker
+
+TODO
+----
+
+	- Implement server to proxy heartbeat.
+	- Implement server tests of heartbeating and reconnecting.
