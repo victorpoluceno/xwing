@@ -1,26 +1,45 @@
-import gevent
 from gevent import monkey
 monkey.patch_all()
 
 import time
-import uuid
 
 import zmq.green as zmq
+import gevent
 
 from xwing.client import Client
 
 
-PPP_READY = b"\x01"  # Signals worker is ready
-PPP_HEARTBEAT = b"\x02"  # Signals worker heartbeat
+SIGNAL_READY = b"\x01"  # Signals worker is ready
+SIGNAL_HEARTBEAT = b"\x02"  # Signals worker heartbeat
 
 HEARTBEAT_INTERVAL = 1.0   # Seconds
 
+REQUEST_SIZE = 4
+ROUTE_REQUEST_SIZE = 5
+
+REPLY_SIZE = 5
+CONTROL_REPLY_SIZE = 2
+
 
 class Proxy:
+    '''The Proxy implementation.
 
-    def __init__(self, frontend_endpoint, backend_endpoint):
+
+    Usage::
+
+      >>> from xwing import Proxy
+      >>> proxy = Proxy('tcp://*:5555', 'ipc:///tmp/0')
+      >>> proxy.run()
+    '''
+
+    def __init__(self, frontend_endpoint, backend_endpoint,
+                 heartbeat_interval=HEARTBEAT_INTERVAL):
         self.frontend_endpoint = frontend_endpoint
         self.backend_endpoint = backend_endpoint
+        self.heartbeat_interval = heartbeat_interval
+
+        self._servers = []
+        self._init_zmq_context()
 
     def run(self):
         '''Run the server loop'''
@@ -31,58 +50,91 @@ class Proxy:
         ''''Join the server loop, this will block until loop ends'''
         self._greenlet_loop.join()
 
-    def _run_zmq_poller(self):
-        context = zmq.Context()
+    def _init_zmq_context(self):
+        self._context = zmq.Context()
+        self._poller_backend = zmq.Poller()
+        self._poller_proxy = zmq.Poller()
 
-        frontend = context.socket(zmq.ROUTER)
+    def _run_zmq_poller(self):
+        frontend = self._context.socket(zmq.ROUTER)
         frontend.bind(self.frontend_endpoint)
 
-        backend = context.socket(zmq.ROUTER)
+        backend = self._context.socket(zmq.ROUTER)
         backend.bind(self.backend_endpoint)
 
-        poll_backend = zmq.Poller()
-        poll_backend.register(backend, zmq.POLLIN)
+        self._poller_backend.register(backend, zmq.POLLIN)
+        self._poller_proxy.register(frontend, zmq.POLLIN)
+        self._poller_proxy.register(backend, zmq.POLLIN)
 
-        poll_proxy = zmq.Poller()
-        poll_proxy.register(frontend, zmq.POLLIN)
-        poll_proxy.register(backend, zmq.POLLIN)
-
-        servers = []
-        heartbeat_at = time.time() + HEARTBEAT_INTERVAL
+        heartbeat_at = time.time() + self.heartbeat_interval
 
         while True:
-            if not servers:
-                poller = poll_backend
+            # We only start polling on both sockets if at least
+            # one server has already benn seen
+            if self._servers:
+                poller = self._poller_proxy
             else:
-                poller = poll_proxy
+                poller = self._poller_backend
 
-            socks = dict(poller.poll(HEARTBEAT_INTERVAL * 1000))
+            socks = dict(poller.poll(self.heartbeat_interval * 1000))
             if socks.get(frontend) == zmq.POLLIN:
-                # Get client request, route to server
-                message = frontend.recv_multipart()
-                if len(message) > 4:
-                    proxy = message.pop(-1)
-                    server = message.pop(-1)
-                    client = Client(proxy, bytes(str(uuid.uuid1()), 'utf-8'))
-                    reply = client.send(server, message[2], raw=True)
-                    if reply:
-                        frontend.send_multipart([message[0], b'', reply])
+                frames = frontend.recv_multipart()
+                frames_size = len(frames)
+
+                if frames_size == REQUEST_SIZE:
+                    self._handle_client_request(backend, frames)
+                elif frames_size == ROUTE_REQUEST_SIZE:
+                    self._handle_client_route_request(frontend, frames)
                 else:
-                    request = [message.pop(-1), b''] + message
-                    backend.send_multipart(request)
+                    raise AssertionError(
+                        'Unkown request message: %r' % frames)
 
             if socks.get(backend) == zmq.POLLIN:
-                message = backend.recv_multipart()
-                if message[-1] == PPP_READY:
-                    if not message[0] in servers:
-                        servers.append(message[0])
-                else:
-                    frontend.send_multipart(message[2:])
+                frames = backend.recv_multipart()
+                frames_size = len(frames)
 
-            # Send heartbeats to idle workers if it's time
+                if frames_size == REPLY_SIZE:
+                    self._handle_server_reply(frontend, frames)
+                elif frames_size == CONTROL_REPLY_SIZE:
+                    self._handle_server_control(frames)
+                else:
+                    raise AssertionError(
+                        'Unkown reply message: %r' % frames)
+
+            # Send heartbeats to idle servers if it's time
             if time.time() >= heartbeat_at:
-                for server in servers:
-                    msg = [server, PPP_HEARTBEAT]
-                    backend.send_multipart(msg)
+                for server in self._servers:
+                    backend.send_multipart([server, SIGNAL_HEARTBEAT])
 
                 heartbeat_at = time.time() + HEARTBEAT_INTERVAL
+
+    def _handle_server_reply(self, frontend, reply):
+        # Handle a reply from a server to a client.
+        # Message format: [server_identity, '', client_identity, '', payload]
+        client_identity, _, payload = reply[2:]
+        frontend.send_multipart([client_identity, _, payload])
+
+    def _handle_server_control(self, control):
+        # Handle control messages from server to proxy.
+        # Message format: [server_identity, payload]
+        server_identity, payload = control
+        assert payload == SIGNAL_READY
+        if server_identity not in self._servers:
+            self._servers.append(server_identity)
+
+    def _handle_client_request(self, backend, request):
+        client_identity, _, payload, server_identity = request
+        backend.send_multipart(
+            [server_identity, b'', client_identity, b'', payload])
+
+    def _handle_client_route_request(self, frontend, request):
+        # A route request is a request that must be routed to another
+        # proxy. The destination multiplex it's the last part
+        # of the message.
+        client_identity, _, payload, server_identity, multiplex = request
+        reply = Client(multiplex).send(server_identity, payload)
+        if not reply:
+            return
+
+        # If got a reply just send it back to the original client
+        frontend.send_multipart([client_identity, b'', reply])

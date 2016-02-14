@@ -87,7 +87,7 @@ class Client(object):
         pack = [payload, server_identity]
 
         # If proxy equal to our multiplex we just send to our own multiplex
-        if multiplex_endpoint == self.multiplex:
+        if multiplex_endpoint == self.multiplex_endpoint:
             self._socket.send_multipart(pack)
         else:
             self._socket.send_multipart(pack + [multiplex_endpoint])
@@ -109,5 +109,5 @@ class Client(object):
         socket = context.socket(kind)
         poller.register(socket, zmq.POLLIN)
         socket.setsockopt_string(zmq.IDENTITY, identity)
-        socket.connect(self.endpoint)
+        socket.connect(self.multiplex_endpoint)
         return socket

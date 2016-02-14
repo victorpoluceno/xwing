@@ -17,7 +17,7 @@ def setup_module():
 
 def send(server, data):
     client = Client('tcp://localhost:5555', 'client1')
-    client.send(server, data)
+    client.send('tcp://localhost:5555', server, data)
 
 
 class TestServer:
