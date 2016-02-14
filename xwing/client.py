@@ -14,7 +14,7 @@ ZMQ_LINGER = 0
 class Client(object):
     '''The Client implementation.
 
-    Provide a Client that knowns how to connect to a Multiplex service
+    Provide a Client that knowns how to connect to a Proxy service
     send requests and waiting for replies. The Client implements a retry
     mecanics.
 

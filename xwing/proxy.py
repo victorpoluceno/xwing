@@ -1,6 +1,3 @@
-from gevent import monkey
-monkey.patch_all()
-
 import time
 
 import zmq.green as zmq
@@ -9,10 +6,10 @@ import gevent
 from xwing.client import Client
 
 
-SIGNAL_READY = b"\x01"  # Signals worker is ready
-SIGNAL_HEARTBEAT = b"\x02"  # Signals worker heartbeat
+SIGNAL_READY = b"\x01"  # Signals server is ready
+SIGNAL_HEARTBEAT = b"\x02"  # Signals server heartbeat
 
-HEARTBEAT_INTERVAL = 1.0   # Seconds
+HEARTBEAT_INTERVAL = 1.0
 
 REQUEST_SIZE = 4
 ROUTE_REQUEST_SIZE = 5
@@ -24,12 +21,23 @@ CONTROL_REPLY_SIZE = 2
 class Proxy:
     '''The Proxy implementation.
 
+    Provides a Proxy that known how to route messages
+    between clients and servers. The proxy also acts as
+    proxy to proxy router when a connect client send a request
+    to another proxy.
+
+    :param frontend_endpoint: Endpoint where clients will connect.
+    :type frontend_endpoint: str
+    :param backend_endpoint: Endpoint where servers will connect.
+    :type frontend_endpoint: str
+    :param heartbeat_interval: Interval used to send heartbeasts in seconds.
 
     Usage::
 
       >>> from xwing import Proxy
       >>> proxy = Proxy('tcp://*:5555', 'ipc:///tmp/0')
       >>> proxy.run()
+      >>> proxy.join()
     '''
 
     def __init__(self, frontend_endpoint, backend_endpoint,
@@ -47,7 +55,7 @@ class Proxy:
         gevent.sleep(0)  # forces the greenlet to be scheduled
 
     def join(self):
-        ''''Join the server loop, this will block until loop ends'''
+        '''Join the server loop, this will block until loop ends'''
         self._greenlet_loop.join()
 
     def _init_zmq_context(self):
@@ -106,7 +114,7 @@ class Proxy:
                 for server in self._servers:
                     backend.send_multipart([server, SIGNAL_HEARTBEAT])
 
-                heartbeat_at = time.time() + HEARTBEAT_INTERVAL
+                heartbeat_at = time.time() + self.heartbeat_interval
 
     def _handle_server_reply(self, frontend, reply):
         # Handle a reply from a server to a client.
