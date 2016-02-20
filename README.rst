@@ -36,6 +36,10 @@ Run using py.test::
 
 	py.test tests
 
+Or if you want to see the coverage report::
+
+	py.test --cov=xwing --cov-report tests/
+	open htmlcov/index.html
 
 References
 ----------

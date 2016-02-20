@@ -1,3 +1,2 @@
 pyzmq==15.2.0
 gevent==1.1rc4
-pytest==2.8.7
