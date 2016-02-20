@@ -16,7 +16,7 @@ from xwing.server import NoData
 
 def send(proxy, server, data):
     client = Client(proxy, 'client1')
-    return client.send(proxy, server, data)
+    return client.send(server, data)
 
 
 class TestServer:

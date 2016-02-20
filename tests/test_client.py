@@ -25,10 +25,9 @@ class TestClient:
         assert self.client.identity
 
     def test_send_and_recv(self):
-        assert self.client.send(
-            'tcp://localhost:5555', self.server.identity, 'ping')
+        assert self.client.send(self.server.identity, 'ping')
         assert self.server.recv() == 'ping'
 
     def test_send_to_fail(self):
         client = Client('tcp://localhost:5555', retry_timeout=0.01)
-        assert not client.send('tcp://localhost:5555', 'unkown', 'hi')
+        assert not client.send('unkown', 'hi')

@@ -47,22 +47,20 @@ class Client(object):
         self._socket = self._setup_zmq_socket(
             self._context, self._poller, zmq.REQ, self.identity)
 
-    def send(self, server_multiplex_endpoint, server_identity, request,
+    def send(self, server_identity, request,
              encoding='utf-8'):
         '''
         Send a request to Server on a Multiplex. The send method implements
         a retry by checking if we got positive answer from destination and
         retrying otherwise.
 
-        :param server_multiplex_endpoint: The multiplex endpoint where the
-        server lives.
         :param server_identity: The Identity of the destination server.
         :param request: The payload to send to Server.
         :param encoding: The desired encoding to be user on this request.
         '''
         server_identity = bytes(server_identity, encoding)
         request = bytes(request, encoding)
-        self._socket_send(server_multiplex_endpoint, server_identity, request)
+        self._socket_send(server_identity, request)
 
         got_reply = False
         retries_left = self.retry_number
@@ -79,8 +77,7 @@ class Client(object):
             self._disconnect_zmq_socket()
             self._socket = self._setup_zmq_socket(self._context, self._poller,
                                                   zmq.REQ, self.identity)
-            self._socket_send(
-                server_multiplex_endpoint, server_identity, request)
+            self._socket_send(server_identity, request)
             retries_left -= 1
 
         if not got_reply and not retries_left:
@@ -88,7 +85,7 @@ class Client(object):
 
         return got_reply
 
-    def _socket_send(self, multiplex_endpoint, server_identity, payload):
+    def _socket_send(self, server_identity, payload):
         pack = [payload, server_identity]
         self._socket.send_multipart(pack)
 

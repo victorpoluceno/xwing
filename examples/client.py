@@ -1,3 +1,6 @@
+from gevent import monkey
+monkey.patch_all()
+
 import sys
 sys.path.append('.')
 
@@ -7,13 +10,13 @@ import random
 from xwing.client import Client
 
 
-def main(endpoint, payload, nmessages, identity):
+def main(endpoint, payload, nmessages):
     print("I: Starting send loop...")
-    client = Client(endpoint, identity)
+    client = Client(endpoint)
 
     start = time.time()
     for i in range(nmessages):
-        server = random.choice([b'0', b'1'])
+        server = random.choice(['0', '1'])
 
         # FIXME implement case where we recive no answer
         # or a bad one
@@ -24,4 +27,4 @@ def main(endpoint, payload, nmessages, identity):
 
 
 if __name__ == '__main__':
-    main(b"tcp://localhost:5555", b'x', 10000, 'client')
+    main("tcp://localhost:5555", 'x', 10000)

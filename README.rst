@@ -44,10 +44,12 @@ Or if you want to see the coverage report::
 TODO
 ----
 
-	- Implement tests of client retry strategy
+	- Add code to handle KeyboardInterrupt on join.
+	- Implement tests of client retry strategy.
 	- Improve README using tcpmux format
 	- Change names to sender/receiver.
 	- Move the basic example to one file.
 	- Implement a check sum on replies.
 	- Add an initial benchmark.
 	- Add a failure test simulation.
+	- Think about current infinity buffer size.

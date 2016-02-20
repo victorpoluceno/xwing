@@ -1,3 +1,6 @@
+from gevent import monkey
+monkey.patch_all()
+
 import sys
 sys.path.append('.')
 
@@ -9,4 +12,5 @@ if __name__ == '__main__':
     frontend, backend = sys.argv[1:]
     proxy = Proxy("tcp://*:{0}".format(frontend),
                   "ipc:///tmp/{0}".format(backend))
-    proxy.start()
+    proxy.run()
+    proxy.join()
