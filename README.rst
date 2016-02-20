@@ -14,6 +14,11 @@ Features
   * Reply check sum.
   * Small parts that can be used to form complex toplogies.
 
+Requirements
+------------
+
+Xwing uses Python 3.4+.
+
 Usage
 -----
 
@@ -22,6 +27,14 @@ Bootstraping::
 	pyvenv env
 	source env/bin/activate
 	pip install -r requirements.txt
+
+
+Testing
+-------
+
+Run using py.test::
+
+	py.test tests
 
 
 References
@@ -35,7 +48,7 @@ References
 TODO
 ----
 
-	- Implement server to proxy heartbeat.
+	- Improve README using tcpmux format
 	- Implement server tests of heartbeating and reconnecting.
 	- Implement tests for the proxy to proxy feature.
 	- Change names to sender/receiver.
