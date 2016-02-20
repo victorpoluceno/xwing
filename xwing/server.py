@@ -1,15 +1,18 @@
-import uuid
-import time
-from queue import Queue, Empty
 import logging
-log = logging.getLogger(__name__)
+import time
+import uuid
+from queue import Empty, Queue
+
+import gevent
 
 import zmq.green as zmq
-import gevent
 
 
 SIGNAL_READY = b"\x01"
 ZMQ_LINGER = 0
+
+
+log = logging.getLogger(__name__)
 
 
 class NoData(Exception):

@@ -1,6 +1,5 @@
-import uuid
 import logging
-log = logging.getLogger(__name__)
+import uuid
 
 import zmq.green as zmq
 
@@ -9,6 +8,9 @@ RETRY_NUMBER = 3
 RETRY_TIMEOUT = 2500
 
 ZMQ_LINGER = 0
+
+
+log = logging.getLogger(__name__)
 
 
 class Client(object):
@@ -85,12 +87,7 @@ class Client(object):
 
     def _socket_send(self, multiplex_endpoint, server_identity, payload):
         pack = [payload, server_identity]
-
-        # If proxy equal to our multiplex we just send to our own multiplex
-        if multiplex_endpoint == self.multiplex_endpoint:
-            self._socket.send_multipart(pack)
-        else:
-            self._socket.send_multipart(pack + [multiplex_endpoint])
+        self._socket.send_multipart(pack)
 
     def _socket_recv(self, timeout):
         socks = dict(self._poller.poll(timeout))

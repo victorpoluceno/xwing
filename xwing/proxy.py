@@ -1,18 +1,14 @@
 import time
 
-import zmq.green as zmq
 import gevent
 
-from xwing.client import Client
+import zmq.green as zmq
 
 
 SIGNAL_READY = b"\x01"  # Signals server is ready
 SIGNAL_HEARTBEAT = b"\x02"  # Signals server heartbeat
 
 HEARTBEAT_INTERVAL = 1.0
-
-REQUEST_SIZE = 4
-ROUTE_REQUEST_SIZE = 5
 
 REPLY_SIZE = 5
 CONTROL_REPLY_SIZE = 2
@@ -22,9 +18,7 @@ class Proxy:
     '''The Proxy implementation.
 
     Provides a Proxy that known how to route messages
-    between clients and servers. The proxy also acts as
-    proxy to proxy router when a connect client send a request
-    to another proxy.
+    between clients and servers.
 
     :param frontend_endpoint: Endpoint where clients will connect.
     :type frontend_endpoint: str
@@ -87,15 +81,7 @@ class Proxy:
             socks = dict(poller.poll(self.heartbeat_interval * 1000))
             if socks.get(frontend) == zmq.POLLIN:
                 frames = frontend.recv_multipart()
-                frames_size = len(frames)
-
-                if frames_size == REQUEST_SIZE:
-                    self._handle_client_request(backend, frames)
-                elif frames_size == ROUTE_REQUEST_SIZE:
-                    self._handle_client_route_request(frontend, frames)
-                else:
-                    raise AssertionError(
-                        'Unkown request message: %r' % frames)
+                self._handle_client_request(backend, frames)
 
             if socks.get(backend) == zmq.POLLIN:
                 frames = backend.recv_multipart()
@@ -134,15 +120,3 @@ class Proxy:
         client_identity, _, payload, server_identity = request
         backend.send_multipart(
             [server_identity, b'', client_identity, b'', payload])
-
-    def _handle_client_route_request(self, frontend, request):
-        # A route request is a request that must be routed to another
-        # proxy. The destination multiplex it's the last part
-        # of the message.
-        client_identity, _, payload, server_identity, multiplex = request
-        reply = Client(multiplex).send(server_identity, payload)
-        if not reply:
-            return
-
-        # If got a reply just send it back to the original client
-        frontend.send_multipart([client_identity, b'', reply])

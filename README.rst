@@ -50,7 +50,6 @@ TODO
 
 	- Improve README using tcpmux format
 	- Implement server tests of heartbeating and reconnecting.
-	- Implement tests for the proxy to proxy feature.
 	- Change names to sender/receiver.
 	- Move the basic example to one file.
 	- Implement a check sum on replies.
