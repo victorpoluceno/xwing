@@ -83,6 +83,9 @@ class Client(object):
                 server_multiplex_endpoint, server_identity, request)
             retries_left -= 1
 
+        if not got_reply and not retries_left:
+            log.error('No retries left giving up.')
+
         return got_reply
 
     def _socket_send(self, multiplex_endpoint, server_identity, payload):

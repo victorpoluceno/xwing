@@ -4,6 +4,9 @@ monkey.patch_all()
 import sys
 sys.path.append('.')
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 from xwing.proxy import Proxy
 
 

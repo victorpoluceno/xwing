@@ -41,19 +41,11 @@ Or if you want to see the coverage report::
 	py.test --cov=xwing --cov-report tests/
 	open htmlcov/index.html
 
-References
-----------
-
-	- http://zguide.zeromq.org/page:all#Robust-Reliable-Queuing-Paranoid-Pirate-Pattern
-	- http://zguide.zeromq.org/py:lpclient
-	- http://zguide.zeromq.org/py:ppqueue
-	- http://zguide.zeromq.org/py:ppworker
-
 TODO
 ----
 
+	- Implement tests of client retry strategy
 	- Improve README using tcpmux format
-	- Implement server tests of heartbeating and reconnecting.
 	- Change names to sender/receiver.
 	- Move the basic example to one file.
 	- Implement a check sum on replies.

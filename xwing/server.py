@@ -95,7 +95,7 @@ class Server(object):
         socket.setsockopt_string(zmq.IDENTITY, self.identity)
         socket.connect(self.multiplex_endpoint)
 
-        log.info("(%s) server ready" % self.identity)
+        log.info("Sending ready signal to proxy")
         socket.send(SIGNAL_READY)
 
     def _disconnect_zmq_socket(self):

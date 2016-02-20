@@ -1,3 +1,4 @@
+import logging
 import time
 
 import gevent
@@ -12,6 +13,10 @@ HEARTBEAT_INTERVAL = 1.0
 
 REPLY_SIZE = 5
 CONTROL_REPLY_SIZE = 2
+
+ZMQ_LINGER = 0
+
+log = logging.getLogger(__name__)
 
 
 class Proxy:
@@ -40,11 +45,13 @@ class Proxy:
         self.backend_endpoint = backend_endpoint
         self.heartbeat_interval = heartbeat_interval
 
+        self._run_loop = False
         self._servers = []
         self._init_zmq_context()
 
     def run(self):
         '''Run the server loop'''
+        self._run_loop = True
         self._greenlet_loop = gevent.spawn(self._run_zmq_poller)
         gevent.sleep(0)  # forces the greenlet to be scheduled
 
@@ -52,25 +59,43 @@ class Proxy:
         '''Join the server loop, this will block until loop ends'''
         self._greenlet_loop.join()
 
+    def stop(self):
+        '''Loop stop.'''
+        self._run_loop = False
+        self._greenlet_loop.kill()
+        self._disconnect_zmq_socket()
+
+    def _disconnect_zmq_socket(self):
+        # To disconnect we need to unplug current socket
+        self._poller_backend.unregister(self._backend)
+        self._poller_proxy.unregister(self._frontend)
+        self._poller_proxy.unregister(self._backend)
+
+        self._frontend.setsockopt(zmq.LINGER, ZMQ_LINGER)
+        self._backend.setsockopt(zmq.LINGER, ZMQ_LINGER)
+
+        self._frontend.close()
+        self._backend.close()
+
     def _init_zmq_context(self):
         self._context = zmq.Context()
         self._poller_backend = zmq.Poller()
         self._poller_proxy = zmq.Poller()
 
     def _run_zmq_poller(self):
-        frontend = self._context.socket(zmq.ROUTER)
-        frontend.bind(self.frontend_endpoint)
+        self._frontend = frontend = self._context.socket(zmq.ROUTER)
+        self._frontend.bind(self.frontend_endpoint)
 
-        backend = self._context.socket(zmq.ROUTER)
-        backend.bind(self.backend_endpoint)
+        self._backend = backend = self._context.socket(zmq.ROUTER)
+        self._backend.bind(self.backend_endpoint)
 
-        self._poller_backend.register(backend, zmq.POLLIN)
-        self._poller_proxy.register(frontend, zmq.POLLIN)
-        self._poller_proxy.register(backend, zmq.POLLIN)
+        self._poller_backend.register(self._backend, zmq.POLLIN)
+        self._poller_proxy.register(self._frontend, zmq.POLLIN)
+        self._poller_proxy.register(self._backend, zmq.POLLIN)
 
         heartbeat_at = time.time() + self.heartbeat_interval
 
-        while True:
+        while self._run_loop:
             # We only start polling on both sockets if at least
             # one server has already benn seen
             if self._servers:
@@ -106,6 +131,7 @@ class Proxy:
         # Handle a reply from a server to a client.
         # Message format: [server_identity, '', client_identity, '', payload]
         client_identity, _, payload = reply[2:]
+        log.debug('Sending reply from server to client')
         frontend.send_multipart([client_identity, _, payload])
 
     def _handle_server_control(self, control):
@@ -113,6 +139,8 @@ class Proxy:
         # Message format: [server_identity, payload]
         server_identity, payload = control
         assert payload == SIGNAL_READY
+
+        log.info("Got server ready signal from: %s" % server_identity)
         if server_identity not in self._servers:
             self._servers.append(server_identity)
 
