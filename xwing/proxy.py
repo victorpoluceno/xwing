@@ -112,13 +112,11 @@ class Proxy:
                 frames = backend.recv_multipart()
                 frames_size = len(frames)
 
+                assert frames_size in [REPLY_SIZE, CONTROL_REPLY_SIZE]
                 if frames_size == REPLY_SIZE:
                     self._handle_server_reply(frontend, frames)
                 elif frames_size == CONTROL_REPLY_SIZE:
                     self._handle_server_control(frames)
-                else:
-                    raise AssertionError(
-                        'Unkown reply message: %r' % frames)
 
             # Send heartbeats to idle servers if it's time
             if time.time() >= heartbeat_at:

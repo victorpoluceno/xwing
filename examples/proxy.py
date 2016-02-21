@@ -13,4 +13,8 @@ if __name__ == '__main__':
     proxy = Proxy("tcp://*:{0}".format(frontend),
                   "ipc:///tmp/{0}".format(backend))
     proxy.run()
-    proxy.join()
+
+    try:
+        proxy.join()
+    except KeyboardInterrupt:
+        pass

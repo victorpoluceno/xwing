@@ -44,12 +44,11 @@ Or if you want to see the coverage report::
 TODO
 ----
 
-	- Add code to handle KeyboardInterrupt on join.
+	- Refactoring ZMQ stuff on its on class.
 	- Implement tests of client retry strategy.
+	- Implement a check sum on replies.
 	- Improve README using tcpmux format
 	- Change names to sender/receiver.
-	- Move the basic example to one file.
-	- Implement a check sum on replies.
 	- Add an initial benchmark.
 	- Add a failure test simulation.
 	- Think about current infinity buffer size.

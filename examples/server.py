@@ -12,4 +12,8 @@ if __name__ == '__main__':
     proxy_endpoint, identity = sys.argv[1:]
     server = Server("ipc:///tmp/{0}".format(proxy_endpoint), identity)
     server.run()
-    server.join()
+
+    try:
+        server.join()
+    except KeyboardInterrupt:
+        pass
