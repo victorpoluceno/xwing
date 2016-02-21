@@ -1,54 +1,63 @@
 XWING
 =====
 
-Blazing fast Python 3 multiplexing and communication library.
+Python 3 implementation of a TCP multiplexer.
+
+XWING is a Python library writen using that help to distribute connect to a single port to other process.
+
+XWING uses ZeroMQ as communicaton layer and gevent as async framework.
 
 Features
 --------
 
-  * Server mutliplexing througth proxy.
-  * Multi protocol support.
-  * Client retry support.
-  * Heartbeat and reconnect support.
-  * Route throught proxy support.
-  * Reply check sum.
-  * Small parts that can be used to form complex toplogies.
+XWING features:
+
+  * Out of the box heartbeat and reconnect support.
+  * Request retry and reconnection support.
+  * Support to all ZeroMQ protocols.
+  * All componentes are designed to be embeded.
 
 Requirements
 ------------
 
-Xwing uses Python 3.4+.
+Xwing requires Python 3.4+, ZeroMQ and Gevent.
 
 Usage
 -----
 
-Bootstraping::
+  pip install xwing
 
-	pyvenv env
-	source env/bin/activate
-	pip install -r requirements.txt
+Development
+----------
 
+Bootstraping
+˜˜˜˜˜˜˜˜˜˜˜˜
+
+Create a venv and install development requirements::
+
+  pyvenv env && source env/bin/activate
+  pip install -r dev-requirements.txt
 
 Testing
--------
+˜˜˜˜˜˜˜
 
-Run using py.test::
+Run using `py.test`::
 
-	py.test tests
+  py.test tests
 
-Or if you want to see the coverage report::
+Or if you want to see coverage report::
 
-	py.test --cov=xwing --cov-report tests/
-	open htmlcov/index.html
+  py.test --cov=xwing --cov-report tests/
+  open htmlcov/index.html
 
 TODO
 ----
 
-	- Refactoring ZMQ stuff on its on class.
-	- Implement tests of client retry strategy.
-	- Implement a check sum on replies.
-	- Improve README using tcpmux format
-	- Change names to sender/receiver.
-	- Add an initial benchmark.
-	- Add a failure test simulation.
-	- Think about current infinity buffer size.
+  - RCF implementation.
+  - Change names to sender/receiver.
+  - Refactoring ZMQ stuff on its on class.
+  - Implement tests of client retry strategy.
+  - Implement a check sum on replies.
+  - Add an initial benchmark.
+  - Add a failure test simulation.
+  - Think about current infinity buffer size.
