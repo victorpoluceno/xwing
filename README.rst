@@ -31,7 +31,7 @@ Development
 ----------
 
 Bootstraping
-˜˜˜˜˜˜˜˜˜˜˜˜
+~~~~~~~~~~~~
 
 Create a venv and install development requirements::
 
@@ -39,7 +39,7 @@ Create a venv and install development requirements::
   pip install -r dev-requirements.txt
 
 Testing
-˜˜˜˜˜˜˜
+~~~~~~~
 
 Run using `py.test`::
 
@@ -50,14 +50,7 @@ Or if you want to see coverage report::
   py.test --cov=xwing --cov-report tests/
   open htmlcov/index.html
 
-TODO
-----
+License
+-------
 
-  - RCF implementation.
-  - Change names to sender/receiver.
-  - Refactoring ZMQ stuff on its on class.
-  - Implement tests of client retry strategy.
-  - Implement a check sum on replies.
-  - Add an initial benchmark.
-  - Add a failure test simulation.
-  - Think about current infinity buffer size.
+The software is licensed under ISC license.
