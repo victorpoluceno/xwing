@@ -17,9 +17,6 @@ def main(endpoint, payload, nmessages):
     start = time.time()
     for i in range(nmessages):
         server = random.choice(['0', '1'])
-
-        # FIXME implement case where we recive no answer
-        # or a bad one
         client.send(server, payload)
 
     end = time.time()
