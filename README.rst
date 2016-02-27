@@ -1,16 +1,16 @@
-XWING
+xwing
 =====
 
 Python 3 implementation of a TCP multiplexer.
 
-XWING is a Python library writen using that help to distribute connect to a single port to other process.
+Xwing is a Python library writen using that help to distribute connect to a single port to other process.
 
-XWING uses ZeroMQ as communicaton layer and gevent as async framework.
+Xwing uses ZeroMQ as communicaton layer and gevent as async framework.
 
 Features
 --------
 
-XWING features:
+Xwing features:
 
   * Out of the box heartbeat and reconnect support.
   * Request retry and reconnection support.
