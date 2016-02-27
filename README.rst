@@ -36,7 +36,7 @@ Bootstraping
 Create a venv and install development requirements::
 
   pyvenv env && source env/bin/activate
-  pip install -r dev-requirements.txt
+  pip install -e .
 
 Testing
 ~~~~~~~
@@ -47,7 +47,8 @@ Run using `py.test`::
 
 Or if you want to see coverage report::
 
-  py.test --cov=xwing --cov-report tests/
+  pip install pytest-cov
+  py.test --cov=xwing --cov-report html tests/
   open htmlcov/index.html
 
 License
