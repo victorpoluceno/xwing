@@ -1,4 +1,0 @@
--r requirements.txt
-
-pytest==2.8.7
-pytest-cov==2.2.1

@@ -2,18 +2,20 @@ from setuptools import setup
 
 
 setup(
-    name='XWING',
+    name='xwing',
     version='0.0.1.dev0',
     url='https://github.com/victorpoluceno/xwing',
     license='ISC',
-    description='XWING is a Python library writen using that help '
+    description='Xwing is a Python library writen using that help '
         'to distribute connect to a single port to other process',
     author='Victor Poluceno',
     author_email='victorpoluceno@gmail.com',
     packages=['xwing'],
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     install_requires=[
-        'gevent',
-        'pyzmq'
+        'gevent==1.1rc5',
+        'pyzmq==15.2.0'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
