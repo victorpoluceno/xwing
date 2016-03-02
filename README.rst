@@ -25,7 +25,44 @@ Xwing requires Python 3.4+, ZeroMQ and Gevent.
 Usage
 -----
 
+Installation
+~~~~~~~~~~~~
+
   pip install xwing
+
+Running the Proxy
+~~~~~~~~~~~~~~~~~
+
+Xwing ships a standalone proxy daemon ready to be used. Proxy will start listening on port 5555 for client connections. Here is how to run the proxy daemon::
+
+  xwing
+
+Server implementation
+~~~~~~~~~~~~~~~~~~~~~
+
+The serve connects to proxy as a server and start waiting to answer clients. Here is a server implementation::
+  
+  from gevent import monkey
+  monkey.patch_all()
+
+  from xwing.server import Server
+
+  server = Server("ipc:///tmp/0", "server0")
+  server.run()
+  server.join()
+
+Client implementation
+~~~~~~~~~~~~~~~~~~~~~
+
+Client connects to proxy daemon and send a data. Here is the Client implementation::
+
+  from gevent import monkey
+  monkey.patch_all()
+
+  from xwing.client import Client
+
+  client = Client("tcp://localhost:5555")
+  client.send("server0", "hello world")
 
 Development
 ----------
