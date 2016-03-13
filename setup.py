@@ -25,5 +25,6 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Distributed Computing',
         'Topic :: System :: Networking',
-    ]
+    ],
+    scripts=['bin/xwing']
 )
