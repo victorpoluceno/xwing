@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+from gevent import monkey
+monkey.patch_all()
+
+import argparse
+import logging
+
+from xwing.proxy import Proxy
+
+
+logging.basicConfig()
+log = logging.getLogger()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Xwing proxy daemon')
+    parser.add_argument("--address", help="frontend address",
+                        default='tcp://127.0.0.1:5555')
+    parser.add_argument("--backend_address", help="backend address",
+                        default='ipc:///tmp/0')
+    parser.add_argument("--loglevel", help="set loglevel", default='DEBUG',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'])
+    args = parser.parse_args()
+    log.setLevel(args.loglevel)
+
+    proxy = Proxy(args.address, args.backend_address)
+    proxy.run()
+
+    try:
+        proxy.join()
+    except KeyboardInterrupt:
+        log.info('Terminated by user.')
