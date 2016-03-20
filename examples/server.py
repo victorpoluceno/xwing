@@ -14,6 +14,7 @@ if __name__ == '__main__':
     server.run()
 
     try:
-        server.join()
+        while True:
+            server.recv()
     except KeyboardInterrupt:
         pass
