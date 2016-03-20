@@ -1,11 +1,8 @@
 import logging
 import uuid
 
-import zmq.green as zmq
+import zmq
 
-
-RETRY_NUMBER = 3
-RETRY_TIMEOUT = 2500
 
 ZMQ_LINGER = 0
 
@@ -13,46 +10,38 @@ ZMQ_LINGER = 0
 log = logging.getLogger(__name__)
 
 
-class Client(object):
-    '''The Client implementation.
+class SocketClient(object):
+    '''The Socket Client implementation.
 
     Provide a Client that knowns how to connect to a Proxy service
-    send requests and waiting for replies. The Client implements a retry
-    mecanics.
+    send requests and waiting for replies.
 
     :param multiplex_endpoint: Mutliplex service address to connect.
     :type multiplex_endpoint: str
     :param identity: Unique client identification. If not set uuid1 will be
     used.
     :type identity: str
-    :param retry_number: Number of retries to try if got no answer and timeout.
-    :param retry_timeout: Timeout to wait for an answer before retrying.
 
     Usage::
 
-      >>> from xwing.client import Client
-      >>> client = Client('tcp://localhost:5555', 'client1')
-      >>> client.send('tcp://localhost:5555', 'server0', 'ping')
+      >>> from xwing.socket import SocketClient
+      >>> client = SocketClient('tcp://localhost:5555', 'client1')
+      >>> client.send('server0', 'ping')
+      >>> client.recv()
     '''
 
-    def __init__(self, multiplex_endpoint, identity=None,
-                 retry_number=RETRY_NUMBER, retry_timeout=RETRY_TIMEOUT):
+    def __init__(self, multiplex_endpoint, identity=None):
         self.multiplex_endpoint = multiplex_endpoint
         self.identity = str(uuid.uuid1()) if not identity else identity
-        self.retry_number = retry_number
-        self.retry_timeout = retry_timeout
 
         self._context = zmq.Context()
         self._poller = zmq.Poller()
-        self._socket = self._setup_zmq_socket(
-            self._context, self._poller, zmq.REQ, self.identity)
+        self.connect()
 
     def send(self, server_identity, request,
              encoding='utf-8'):
         '''
-        Send a request to Server on a Multiplex. The send method implements
-        a retry by checking if we got positive answer from destination and
-        retrying otherwise.
+        Send a request to a Server.
 
         :param server_identity: The Identity of the destination server.
         :param request: The payload to send to Server.
@@ -61,46 +50,29 @@ class Client(object):
         server_identity = bytes(server_identity, encoding)
         request = bytes(request, encoding)
         self._socket_send(server_identity, request)
+        return True
 
-        got_reply = False
-        retries_left = self.retry_number
-        while retries_left:
-            reply = self._socket_recv(self.retry_timeout)
-            # If we reply is equal to the payload we sent
-            # it means we delivered to right destination
-            if reply == request:
-                got_reply = True
-                break
+    def recv(self, timeout=None, encoding='utf-8'):
+        if not self._run_zmq_poller(timeout):
+            return None
 
-            log.error("Malformed reply from server: %s" % reply)
-            log.info("Reconnecting and resending...")
-            self._disconnect_zmq_socket()
-            self._socket = self._setup_zmq_socket(self._context, self._poller,
-                                                  zmq.REQ, self.identity)
-            self._socket_send(server_identity, request)
-            retries_left -= 1
-
-        if not got_reply and not retries_left:
-            log.error('No retries left giving up.')
-
-        return got_reply
+        data = self._socket.recv()
+        return data.decode(encoding)
 
     def _socket_send(self, server_identity, payload):
         pack = [payload, server_identity]
         self._socket.send_multipart(pack)
 
-    def _socket_recv(self, timeout):
+    def _run_zmq_poller(self, timeout):
         socks = dict(self._poller.poll(timeout))
-        if socks.get(self._socket) != zmq.POLLIN:
-            return None
+        if socks.get(self._socket) == zmq.POLLIN:
+            return True
 
-        return self._socket.recv()
+        return None
 
-    def _disconnect_zmq_socket(self):
-        # Socket is confused. Close and remove it.
-        self._socket.setsockopt(zmq.LINGER, ZMQ_LINGER)
-        self._socket.close()
-        self._poller.unregister(self._socket)
+    def connect(self):
+        self._socket = self._setup_zmq_socket(
+            self._context, self._poller, zmq.REQ, self.identity)
 
     def _setup_zmq_socket(self, context, poller, kind, identity):
         socket = context.socket(kind)
@@ -108,3 +80,9 @@ class Client(object):
         socket.setsockopt_string(zmq.IDENTITY, identity)
         socket.connect(self.multiplex_endpoint)
         return socket
+
+    def close(self):
+        # Socket is confused. Close and remove it.
+        self._socket.setsockopt(zmq.LINGER, ZMQ_LINGER)
+        self._socket.close()
+        self._poller.unregister(self._socket)
