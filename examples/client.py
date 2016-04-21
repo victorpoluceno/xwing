@@ -5,6 +5,8 @@ import time
 
 from xwing.client import SocketClient
 
+# python examples/client.py
+
 
 def main(endpoint, payload, nmessages):
     print("Starting send loop...")

@@ -3,24 +3,22 @@ xwing
 
 Python 3 implementation of a TCP multiplexer.
 
-Xwing is a Python library writen using that help to distribute connect to a single port to other process.
+Xwing is a Python library that helps to distribute connections to a single port to other multiple process.
 
-Xwing uses ZeroMQ as communicaton layer and gevent as async framework.
+Xwing uses ZeroMQ as communicaton layer.
 
 Features
 --------
 
 Xwing features:
 
-  * Out of the box heartbeat and reconnect support.
-  * Request retry and reconnection support.
   * Support to all ZeroMQ protocols.
-  * All componentes are designed to be embeded.
+  * API componentes designed to be embeded.
 
 Requirements
 ------------
 
-Xwing requires Python 3.4+, ZeroMQ and Gevent.
+Xwing requires Python 3.4+ and ZeroMQ.
 
 Usage
 -----
@@ -41,28 +39,24 @@ Server implementation
 ~~~~~~~~~~~~~~~~~~~~~
 
 The serve connects to proxy as a server and start waiting to answer clients. Here is a server implementation::
-  
-  from gevent import monkey
-  monkey.patch_all()
 
-  from xwing.server import Server
+  from xwing.server import SocketServer
 
   server = Server("ipc:///tmp/0", "server0")
-  server.run()
-  server.join()
+  server.bind()
+  ping = server.recv()
+  server.send(pong)
 
 Client implementation
 ~~~~~~~~~~~~~~~~~~~~~
 
 Client connects to proxy daemon and send a data. Here is the Client implementation::
 
-  from gevent import monkey
-  monkey.patch_all()
-
-  from xwing.client import Client
+  from xwing.client import SocketClient
 
   client = Client("tcp://localhost:5555")
-  client.send("server0", "hello world")
+  client.send("server0", "ping")
+  print(client.recv())
 
 Development
 ----------

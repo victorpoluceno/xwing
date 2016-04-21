@@ -1,12 +1,9 @@
-import time
 import logging
 
 import zmq
 
 
-SIGNAL_SIMPLE_READY = b"\x01"  # Signals server is ready
-SIGNAL_RICH_READY = b"\x02"
-SIGNAL_HEARTBEAT = b"\x03"  # Signals server heartbeat
+SIGNAL_READY = b"\x01"  # Signals server is ready
 
 REPLY_SIZE = 5
 CONTROL_REPLY_SIZE = 2
@@ -85,8 +82,6 @@ class Proxy:
         self._poller_proxy.register(self._frontend, zmq.POLLIN)
         self._poller_proxy.register(self._backend, zmq.POLLIN)
 
-        heartbeat_at = time.time() + self.polling_interval
-
         while self._run_loop:
             # We only start polling on both sockets if at least
             # one server has already benn seen
@@ -110,17 +105,6 @@ class Proxy:
                 elif frames_size == CONTROL_REPLY_SIZE:
                     self._handle_server_control(frames)
 
-            # Send heartbeats to idle servers if it's time
-            if time.time() >= heartbeat_at:
-                for server, kind in self._servers:
-                    if kind == SIGNAL_SIMPLE_READY:
-                        continue
-
-                    log.debug('Sending hearbeat to %s' % server)
-                    backend.send_multipart([server, SIGNAL_HEARTBEAT])
-
-                heartbeat_at = time.time() + self.polling_interval
-
     def _handle_server_reply(self, frontend, reply):
         # Handle a reply from a server to a client.
         # Message format: [server_identity, '', client_identity, '', payload]
@@ -131,7 +115,7 @@ class Proxy:
         # Handle control messages from server to proxy.
         # Message format: [server_identity, payload]
         server_identity, payload = control
-        assert payload in (SIGNAL_SIMPLE_READY, SIGNAL_RICH_READY)
+        assert payload == SIGNAL_READY
 
         log.debug("Got server ready signal from: %s" % server_identity)
         if server_identity not in self._servers:

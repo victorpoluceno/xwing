@@ -6,7 +6,7 @@ logging.basicConfig(level='DEBUG')
 
 from xwing.server import SocketServer
 
-# python examples/simple/server.py ipc:///tmp/0 0
+# python examples/server.py ipc:///tmp/0 0
 
 if __name__ == '__main__':
     print(sys.argv)
