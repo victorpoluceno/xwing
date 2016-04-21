@@ -3,7 +3,7 @@ sys.path.append('.')
 
 import time
 
-from xwing.client import SocketClient
+from xwing.socket.client import SocketClient
 
 # python examples/client.py
 

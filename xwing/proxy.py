@@ -1,4 +1,5 @@
 import logging
+import threading
 
 import zmq
 
@@ -44,14 +45,22 @@ class Proxy:
         self._servers = []
         self._init_zmq_context()
 
-    def run(self):
+    def run(self, forever=True):
         '''Run the server loop'''
-        self._run_loop = True
-        self._run_zmq_poller()
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self._run_zmq_poller)
+        self.thread.daemon = False
+        self.thread.start()
+        if forever:
+            try:
+                self.thread.join()
+            except KeyboardInterrupt:
+                self.stop()
 
     def stop(self):
         '''Loop stop.'''
-        self._run_loop = False
+        self.stop_event.set()
+        self.thread.join()
         self._disconnect_zmq_socket()
 
     def _disconnect_zmq_socket(self):
@@ -82,7 +91,7 @@ class Proxy:
         self._poller_proxy.register(self._frontend, zmq.POLLIN)
         self._poller_proxy.register(self._backend, zmq.POLLIN)
 
-        while self._run_loop:
+        while not self.stop_event.isSet():
             # We only start polling on both sockets if at least
             # one server has already benn seen
             if self._servers:
@@ -122,6 +131,8 @@ class Proxy:
             self._servers.append((server_identity, payload))
 
     def _handle_client_request(self, backend, request):
+        # FIXME if server is not known, we need to answer something
+        # need to implement the RFC to make this work
         client_identity, _, payload, server_identity = request
         backend.send_multipart(
             [server_identity, b'', client_identity, b'', payload])

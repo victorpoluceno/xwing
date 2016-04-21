@@ -58,7 +58,7 @@ class SocketServer(object):
 
         return self._frames[-1]
 
-    def recv_raw(self, timeout):
+    def recv_raw(self, timeout=None):
         return self.recv(timeout, encoding=None)
 
     def send(self, data, encoding='utf-8'):
@@ -67,13 +67,19 @@ class SocketServer(object):
         :param data: Data to send.
         :param encode: Encoding used to encode from string to bytes.
         '''
-        assert self._frames
+        # FIXME this state frames mechanics is no good
+        # we need a better aproaching. May be go event closer
+        # to socket API by implemeting an accept method
+        assert self._frames, "Send should always be callled after a recv"
+
         if encoding:
             self._frames[-1] = bytes(data, encoding)
         else:
             self._frames[-1] = data
 
         self._socket.send_multipart(self._frames)
+        self._frames = None
+        return True
 
     def send_raw(self, data):
         return self.send(data, encoding=None)

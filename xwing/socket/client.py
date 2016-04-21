@@ -36,7 +36,7 @@ class SocketClient(object):
 
         self._context = zmq.Context()
         self._poller = zmq.Poller()
-        self.connect()
+        self.connect()  # FIXME should be explicitly called
 
     def send(self, server_identity, request,
              encoding='utf-8'):

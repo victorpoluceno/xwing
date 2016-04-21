@@ -4,7 +4,7 @@ sys.path.append('.')
 import logging
 logging.basicConfig(level='DEBUG')
 
-from xwing.server import SocketServer
+from xwing.socket.server import SocketServer
 
 # python examples/server.py ipc:///tmp/0 0
 
