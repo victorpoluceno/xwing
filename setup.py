@@ -14,7 +14,6 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
     install_requires=[
-        'gevent==1.1rc5',
         'pyzmq==15.2.0'
     ],
     classifiers=[

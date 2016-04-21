@@ -1,20 +1,19 @@
-from gevent import monkey
-monkey.patch_all()
-
 import sys
 sys.path.append('.')
 
-from xwing.server import Server
+import logging
+logging.basicConfig(level='DEBUG')
 
+from xwing.socket.server import SocketServer
+
+# python examples/server.py ipc:///tmp/0 0
 
 if __name__ == '__main__':
     print(sys.argv)
     proxy_endpoint, identity = sys.argv[1:]
-    server = Server("ipc:///tmp/{0}".format(proxy_endpoint), identity)
-    server.run()
 
-    try:
-        while True:
-            server.recv()
-    except KeyboardInterrupt:
-        pass
+    socket_server = SocketServer(proxy_endpoint, identity)
+    socket_server.bind()
+    while True:
+        data = socket_server.recv()
+        socket_server.send(data)

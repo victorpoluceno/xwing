@@ -1,25 +1,33 @@
-from gevent import monkey
-monkey.patch_all()
-
 import sys
 sys.path.append('.')
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-from xwing import Client, Proxy, Server
+import pytest
+
+from xwing.proxy import Proxy
+from xwing.socket.client import SocketClient
+from xwing.socket.server import SocketServer
 
 
 class TestClient:
 
-    def setup_class(self):
-        proxy = Proxy('tcp://*:5555', 'ipc:///tmp/0')
-        proxy.run()
+    @classmethod
+    def setup_class(cls):
+        cls.proxy = Proxy('tcp://*:5555', 'ipc:///tmp/0')
+        cls.proxy.run(forever=False)
 
-        self.server = Server('ipc:///tmp/0')
-        self.server.run()
+        cls.server = SocketServer('ipc:///tmp/0')
+        cls.server.bind()
 
-        self.client = Client('tcp://localhost:5555')
+        cls.client = SocketClient('tcp://localhost:5555')
+
+    @classmethod
+    def teardown_class(cls):
+        cls.client.close()
+        cls.server.close()
+        cls.proxy.stop()
 
     def test_auto_identity(self):
         assert self.client.identity
@@ -28,6 +36,10 @@ class TestClient:
         assert self.client.send(self.server.identity, 'ping')
         assert self.server.recv() == 'ping'
 
+    def test_recv_no_data(self):
+        assert self.client.recv(timeout=0.1) is None
+
+    @pytest.mark.skip(reason="need to implement RFC")
     def test_send_to_fail(self):
-        client = Client('tcp://localhost:5555', retry_timeout=0.01)
+        client = SocketClient('tcp://localhost:5555')
         assert not client.send('unkown', 'hi')

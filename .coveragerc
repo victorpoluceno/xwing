@@ -1,2 +1,2 @@
 [run]
-concurrency = gevent
+concurrency = thread
