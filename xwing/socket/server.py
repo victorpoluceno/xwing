@@ -42,47 +42,44 @@ class SocketServer(object):
 
         self._init_zmq_context()
 
-    def recv(self, timeout=None, encoding='utf-8'):
+    def recv(self, timeout=None):
         '''Try to recv data. If not data is recv NoData exception will
         raise.
 
         :param timeout: Timeout in seconds. `None` meaning forever.
-        :param encode: Encoding used to decode from bytes to string.
         '''
         if not self._run_zmq_poller(timeout):
             return None
 
         self._frames = self._socket.recv_multipart()
-        if encoding:
-            return self._frames[-1].decode(encoding)
-
         return self._frames[-1]
 
-    def recv_raw(self, timeout=None):
-        return self.recv(timeout, encoding=None)
+    def recv_str(self, timeout=None, encoding='utf-8'):
+        data = self.recv(timeout)
+        if encoding:
+            data = data.decode(encoding)
 
-    def send(self, data, encoding='utf-8'):
+        return data
+
+    def send(self, data):
         '''Send data to connected client.
 
         :param data: Data to send.
-        :param encode: Encoding used to encode from string to bytes.
         '''
         # FIXME this state frames mechanics is no good
         # we need a better aproaching. May be go event closer
         # to socket API by implemeting an accept method
         assert self._frames, "Send should always be callled after a recv"
-
-        if encoding:
-            self._frames[-1] = bytes(data, encoding)
-        else:
-            self._frames[-1] = data
-
+        self._frames[-1] = data
         self._socket.send_multipart(self._frames)
         self._frames = None
         return True
 
-    def send_raw(self, data):
-        return self.send(data, encoding=None)
+    def send_str(self, data, encoding='utf-8'):
+        if encoding:
+            data = bytes(data, encoding)
+
+        return self.send(data)
 
     def close(self):
         # To disconnect we need to unplug current socket

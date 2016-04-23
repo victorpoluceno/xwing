@@ -37,16 +37,16 @@ class TestServer:
     def test_auto_identity(self):
         assert self.server.identity
 
-    def test_send_and_recv(self):
+    def test_send_and_recv_str(self):
         data = 'ping'
+        self.client.send_str(self.server.identity, data)
+        self.server.send_str(self.server.recv_str())
+        assert self.client.recv_str() == data
+
+    def test_send_and_recv(self):
+        data = b'ping'
         self.client.send(self.server.identity, data)
         self.server.send(self.server.recv())
-        assert self.client.recv() == data
-
-    def test_send_and_recv_raw(self):
-        data = 'ping'
-        self.client.send(self.server.identity, data)
-        self.server.send_raw(self.server.recv_raw())
         assert self.client.recv() == data
 
     def test_recv_no_data(self):
@@ -54,4 +54,4 @@ class TestServer:
 
     def test_send_without_recv(self):
         with pytest.raises(AssertionError):
-            self.server.send('ping')
+            self.server.send(b'ping')

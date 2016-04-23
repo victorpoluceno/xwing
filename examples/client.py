@@ -22,4 +22,4 @@ def main(endpoint, payload, nmessages):
 
 
 if __name__ == '__main__':
-    main("tcp://localhost:5555", 'x', 10000)
+    main("tcp://localhost:5555", b'x', 10000)

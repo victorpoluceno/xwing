@@ -38,37 +38,38 @@ class SocketClient(object):
         self._poller = zmq.Poller()
         self.connect()  # FIXME should be explicitly called
 
-    def send(self, server_identity, request,
-             encoding='utf-8'):
+    def send(self, server_identity, request):
         '''
         Send a request to a Server.
 
         :param server_identity: The Identity of the destination server.
         :param request: The payload to send to Server.
-        :param encoding: The desired encoding to be user on this request.
         '''
-        if encoding:
-            server_identity = bytes(server_identity, encoding)
-            request = bytes(request, encoding)
-
+        server_identity = bytes(server_identity, 'utf-8')
         self._socket_send(server_identity, request)
         return True
 
-    def send_raw(self, server_identity, request):
-        return self.send(server_identity, request, encoding=None)
+    def send_str(self, server_identity, request, encoding='utf-8'):
+        request = bytes(request, encoding)
+        return self.send(server_identity, request)
 
-    def recv(self, timeout=None, encoding='utf-8'):
+    def recv(self, timeout=None):
+        '''
+        Recv a request from Server.
+
+        :param timeout: Timeout in seconds. `None` meaning forever.
+        '''
         if not self._run_zmq_poller(timeout):
             return None
 
-        data = self._socket.recv()
+        return self._socket.recv()
+
+    def recv_str(self, timeout=None, encoding='utf-8'):
+        data = self.recv(timeout)
         if encoding:
             data = data.decode(encoding)
 
         return data
-
-    def recv_raw(self, timeout=None):
-        return self.recv(timeout, encoding=None)
 
     def _socket_send(self, server_identity, payload):
         pack = [payload, server_identity]
