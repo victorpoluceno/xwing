@@ -47,6 +47,12 @@ class TestClient:
     def test_recv_no_data(self):
         assert self.client.recv(timeout=0.1) is None
 
+    @pytest.mark.skip(reason="need to implement client without REQ")
+    def test_recv_withoud_send(self):
+        with pytest.raises(AssertionError):
+            self.client.send(self.server.identity, 'ping')
+            self.client.send(self.server.identity, 'ping')
+
     @pytest.mark.skip(reason="need to implement RFC")
     def test_send_to_fail(self):
         client = SocketClient('tcp://localhost:5555')
