@@ -33,8 +33,16 @@ class TestClient:
         assert self.client.identity
 
     def test_send_and_recv(self):
-        assert self.client.send(self.server.identity, 'ping')
-        assert self.server.recv() == 'ping'
+        data = 'ping'
+        self.client.send(self.server.identity, data)
+        self.server.send(self.server.recv())
+        assert self.client.recv() == data
+
+    def test_send_and_recv_raw(self):
+        data = b'ping'
+        self.client.send_raw(bytes(self.server.identity, 'utf-8'), data)
+        self.server.send(self.server.recv())
+        assert self.client.recv_raw() == data
 
     def test_recv_no_data(self):
         assert self.client.recv(timeout=0.1) is None

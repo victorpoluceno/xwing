@@ -47,17 +47,28 @@ class SocketClient(object):
         :param request: The payload to send to Server.
         :param encoding: The desired encoding to be user on this request.
         '''
-        server_identity = bytes(server_identity, encoding)
-        request = bytes(request, encoding)
+        if encoding:
+            server_identity = bytes(server_identity, encoding)
+            request = bytes(request, encoding)
+
         self._socket_send(server_identity, request)
         return True
+
+    def send_raw(self, server_identity, request):
+        return self.send(server_identity, request, encoding=None)
 
     def recv(self, timeout=None, encoding='utf-8'):
         if not self._run_zmq_poller(timeout):
             return None
 
         data = self._socket.recv()
-        return data.decode(encoding)
+        if encoding:
+            data = data.decode(encoding)
+
+        return data
+
+    def recv_raw(self, timeout=None):
+        return self.recv(timeout, encoding=None)
 
     def _socket_send(self, server_identity, payload):
         pack = [payload, server_identity]
