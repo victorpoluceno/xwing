@@ -69,7 +69,7 @@ class SocketServer(object):
         # FIXME this state frames mechanics is no good
         # we need a better aproaching. May be go event closer
         # to socket API by implemeting an accept method
-        assert self._frames, "Send should always be callled after a recv"
+        assert self._frames, "Send should always be called after a recv"
         self._frames[-1] = data
         self._socket.send_multipart(self._frames)
         self._frames = None

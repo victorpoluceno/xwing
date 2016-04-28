@@ -15,6 +15,7 @@ class TestClient:
 
     @classmethod
     def setup_class(cls):
+        # FIXME it seems that exceptions here are not getting raised
         cls.proxy = Proxy('tcp://*:5555', 'ipc:///tmp/0')
         cls.proxy.run(forever=False)
 
@@ -22,6 +23,7 @@ class TestClient:
         cls.server.bind()
 
         cls.client = SocketClient('tcp://localhost:5555')
+        cls.client.connect(cls.server.identity)
 
     @classmethod
     def teardown_class(cls):
@@ -53,7 +55,7 @@ class TestClient:
             self.client.send(self.server.identity, b'ping')
             self.client.send(self.server.identity, b'ping')
 
-    @pytest.mark.skip(reason="need to implement RFC")
     def test_send_to_fail(self):
         client = SocketClient('tcp://localhost:5555')
-        assert not client.send('unkown', b'hi')
+        with pytest.raises(ConnectionRefusedError):  # NOQA
+            client.connect('unkown')

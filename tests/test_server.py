@@ -27,6 +27,7 @@ class TestServer:
         cls.server.bind()
 
         cls.client = SocketClient('tcp://localhost:5555', 'client1')
+        cls.client.connect(cls.server.identity)
 
     @classmethod
     def teardown_class(cls):

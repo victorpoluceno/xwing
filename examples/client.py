@@ -11,6 +11,7 @@ from xwing.socket.client import SocketClient
 def main(endpoint, payload, nmessages):
     print("Starting send loop...")
     client = SocketClient(endpoint)
+    client.connect('0')
 
     start = time.time()
     for i in range(nmessages):
