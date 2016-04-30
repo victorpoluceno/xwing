@@ -6,6 +6,8 @@ import zmq
 
 ZMQ_LINGER = 0
 
+SERVICE_POSITIVE_REPLY = b'+'
+
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +28,8 @@ class SocketClient(object):
 
       >>> from xwing.socket import SocketClient
       >>> client = SocketClient('tcp://localhost:5555', 'client1')
-      >>> client.send('server0', 'ping')
+      >>> client.connect('server0')
+      >>> client.send(b'ping')
       >>> client.recv()
     '''
 
@@ -36,26 +39,24 @@ class SocketClient(object):
 
         self._context = zmq.Context()
         self._poller = zmq.Poller()
-        self.connect()  # FIXME should be explicitly called
 
-    def send(self, server_identity, request):
+    def send(self, data):
         '''
         Send a request to a Server.
 
-        :param server_identity: The Identity of the destination server.
-        :param request: The payload to send to Server.
+        :param data: The payload to send to Server.
         '''
-        server_identity = bytes(server_identity, 'utf-8')
-        self._socket_send(server_identity, request)
+        service = bytes(self.service, 'utf-8')
+        self._socket_send(service, data)
         return True
 
-    def send_str(self, server_identity, request, encoding='utf-8'):
-        request = bytes(request, encoding)
-        return self.send(server_identity, request)
+    def send_str(self, data, encoding='utf-8'):
+        data = bytes(data, encoding)
+        return self.send(data)
 
     def recv(self, timeout=None):
         '''
-        Recv a request from Server.
+        Recv data from Server.
 
         :param timeout: Timeout in seconds. `None` meaning forever.
         '''
@@ -71,6 +72,23 @@ class SocketClient(object):
 
         return data
 
+    def connect(self, service):
+        self._socket = self._setup_zmq_socket(
+            self._context, self._poller, zmq.REQ, self.identity)
+        self._socket.send(bytes(service, 'utf-8'))
+        reply = self._socket.recv()
+        if reply != SERVICE_POSITIVE_REPLY:
+            raise ConnectionRefusedError() # NOQA
+
+        self.service = service
+        return True
+
+    def close(self):
+        # Socket is confused. Close and remove it.
+        self._socket.setsockopt(zmq.LINGER, ZMQ_LINGER)
+        self._socket.close()
+        self._poller.unregister(self._socket)
+
     def _socket_send(self, server_identity, payload):
         pack = [payload, server_identity]
         self._socket.send_multipart(pack)
@@ -82,19 +100,9 @@ class SocketClient(object):
 
         return None
 
-    def connect(self):
-        self._socket = self._setup_zmq_socket(
-            self._context, self._poller, zmq.REQ, self.identity)
-
     def _setup_zmq_socket(self, context, poller, kind, identity):
         socket = context.socket(kind)
         poller.register(socket, zmq.POLLIN)
         socket.setsockopt_string(zmq.IDENTITY, identity)
         socket.connect(self.multiplex_endpoint)
         return socket
-
-    def close(self):
-        # Socket is confused. Close and remove it.
-        self._socket.setsockopt(zmq.LINGER, ZMQ_LINGER)
-        self._socket.close()
-        self._poller.unregister(self._socket)

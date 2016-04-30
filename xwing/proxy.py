@@ -8,6 +8,8 @@ SIGNAL_READY = b"\x01"  # Signals server is ready
 
 REPLY_SIZE = 5
 CONTROL_REPLY_SIZE = 2
+SERVICE_QUERY_SIZE = 3
+CLIENT_REQUEST_SIZE = 4
 
 POLLING_INTERVAL = 1.0
 
@@ -93,7 +95,7 @@ class Proxy:
 
         while not self.stop_event.isSet():
             # We only start polling on both sockets if at least
-            # one server has already benn seen
+            # one server has already been seen
             if self._servers:
                 poller = self._poller_proxy
             else:
@@ -102,7 +104,11 @@ class Proxy:
             socks = dict(poller.poll(self.polling_interval * 1000))
             if socks.get(frontend) == zmq.POLLIN:
                 frames = frontend.recv_multipart()
-                self._handle_client_request(backend, frames)
+                frames_size = len(frames)
+                if frames_size == SERVICE_QUERY_SIZE:
+                    self._handle_service_query(frontend, frames)
+                elif frames_size == CLIENT_REQUEST_SIZE:
+                    self._handle_client_request(backend, frames)
 
             if socks.get(backend) == zmq.POLLIN:
                 frames = backend.recv_multipart()
@@ -128,11 +134,18 @@ class Proxy:
 
         log.debug("Got server ready signal from: %s" % server_identity)
         if server_identity not in self._servers:
-            self._servers.append((server_identity, payload))
+            self._servers.append(server_identity)
 
     def _handle_client_request(self, backend, request):
         # FIXME if server is not known, we need to answer something
-        # need to implement the RFC to make this work
+        # need to implement a way to close connection
         client_identity, _, payload, server_identity = request
         backend.send_multipart(
             [server_identity, b'', client_identity, b'', payload])
+
+    def _handle_service_query(self, frontend, query):
+        client_identity, _, service_identity = query
+        # TODO the positive answer should be done by the server it self
+        # see: https://tools.ietf.org/html/rfc1078
+        reply = b'+' if service_identity in self._servers else b'-'
+        frontend.send_multipart([client_identity, b'', reply])

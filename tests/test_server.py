@@ -27,6 +27,7 @@ class TestServer:
         cls.server.bind()
 
         cls.client = SocketClient('tcp://localhost:5555', 'client1')
+        cls.client.connect(cls.server.identity)
 
     @classmethod
     def teardown_class(cls):
@@ -39,13 +40,13 @@ class TestServer:
 
     def test_send_and_recv_str(self):
         data = 'ping'
-        self.client.send_str(self.server.identity, data)
+        self.client.send_str(data)
         self.server.send_str(self.server.recv_str())
         assert self.client.recv_str() == data
 
     def test_send_and_recv(self):
         data = b'ping'
-        self.client.send(self.server.identity, data)
+        self.client.send(data)
         self.server.send(self.server.recv())
         assert self.client.recv() == data
 
