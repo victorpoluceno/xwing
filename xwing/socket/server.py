@@ -1,10 +1,8 @@
 import logging
-import uuid
 
 import zmq
 
-
-ZMQ_LINGER = 0
+from xwing.socket.backend.zmq import ZMQBackend
 
 log = logging.getLogger(__name__)
 
@@ -38,9 +36,11 @@ class SocketServer(object):
 
     def __init__(self, multiplex_endpoint, identity=None):
         self.multiplex_endpoint = multiplex_endpoint
-        self.identity = str(uuid.uuid1()) if not identity else identity
+        self.backend = ZMQBackend(identity)
 
-        self._init_zmq_context()
+    @property
+    def identity(self):
+        return self.backend.identity
 
     def recv(self, timeout=None):
         '''Try to recv data. If not data is recv NoData exception will
@@ -48,10 +48,11 @@ class SocketServer(object):
 
         :param timeout: Timeout in seconds. `None` meaning forever.
         '''
-        if not self._run_zmq_poller(timeout):
+        frames = self.backend.recv_multipart(timeout)
+        if not frames:
             return None
 
-        self._frames = self._socket.recv_multipart()
+        self._frames = frames
         return self._frames[-1]
 
     def recv_str(self, timeout=None, encoding='utf-8'):
@@ -71,7 +72,7 @@ class SocketServer(object):
         # to socket API by implemeting an accept method
         assert self._frames, "Send should always be called after a recv"
         self._frames[-1] = data
-        self._socket.send_multipart(self._frames)
+        self.backend.send_multipart(self._frames)
         self._frames = None
         return True
 
@@ -82,27 +83,10 @@ class SocketServer(object):
         return self.send(data)
 
     def close(self):
-        # To disconnect we need to unplug current socket
-        self._poller.unregister(self._socket)
-        self._socket.setsockopt(zmq.LINGER, ZMQ_LINGER)
-        self._socket.close()
+        self.backend.close()
 
     def bind(self):
-        self._socket = socket = self._context.socket(zmq.DEALER)
-        self._poller.register(socket, zmq.POLLIN)
-        socket.setsockopt_string(zmq.IDENTITY, self.identity)
-        socket.connect(self.multiplex_endpoint)
+        self.backend.connect(zmq.DEALER, self.multiplex_endpoint)
 
         log.info("Sending ready signal to proxy")
-        self._socket.send(self.SIGNAL_READY)
-
-    def _init_zmq_context(self):
-        self._context = zmq.Context()
-        self._poller = zmq.Poller()
-
-    def _run_zmq_poller(self, timeout):
-        socks = dict(self._poller.poll(timeout))
-        if socks.get(self._socket) == zmq.POLLIN:
-            return True
-
-        return None
+        self.backend.send(self.SIGNAL_READY)
