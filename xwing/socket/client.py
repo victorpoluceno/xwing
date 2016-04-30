@@ -1,12 +1,8 @@
 import logging
-import uuid
 
 import zmq
 
-
-ZMQ_LINGER = 0
-
-SERVICE_POSITIVE_REPLY = b'+'
+from xwing.socket.backend.zmq import ZMQBackend
 
 
 log = logging.getLogger(__name__)
@@ -33,12 +29,15 @@ class SocketClient(object):
       >>> client.recv()
     '''
 
+    SERVICE_POSITIVE_REPLY = b'+'
+
     def __init__(self, multiplex_endpoint, identity=None):
         self.multiplex_endpoint = multiplex_endpoint
-        self.identity = str(uuid.uuid1()) if not identity else identity
+        self.backend = ZMQBackend(identity)
 
-        self._context = zmq.Context()
-        self._poller = zmq.Poller()
+    @property
+    def identity(self):
+        return self.backend.identity
 
     def send(self, data):
         '''
@@ -47,7 +46,7 @@ class SocketClient(object):
         :param data: The payload to send to Server.
         '''
         service = bytes(self.service, 'utf-8')
-        self._socket_send(service, data)
+        self.backend.send_multipart([data, service])
         return True
 
     def send_str(self, data, encoding='utf-8'):
@@ -60,10 +59,10 @@ class SocketClient(object):
 
         :param timeout: Timeout in seconds. `None` meaning forever.
         '''
-        if not self._run_zmq_poller(timeout):
+        if not self.backend.poll(timeout):
             return None
 
-        return self._socket.recv()
+        return self.backend.recv()
 
     def recv_str(self, timeout=None, encoding='utf-8'):
         data = self.recv(timeout)
@@ -73,36 +72,14 @@ class SocketClient(object):
         return data
 
     def connect(self, service):
-        self._socket = self._setup_zmq_socket(
-            self._context, self._poller, zmq.REQ, self.identity)
-        self._socket.send(bytes(service, 'utf-8'))
-        reply = self._socket.recv()
-        if reply != SERVICE_POSITIVE_REPLY:
+        self.backend.connect(zmq.REQ, self.multiplex_endpoint)
+        self.backend.send(bytes(service, 'utf-8'))
+        reply = self.backend.recv()
+        if reply != self.SERVICE_POSITIVE_REPLY:
             raise ConnectionRefusedError() # NOQA
 
         self.service = service
         return True
 
     def close(self):
-        # Socket is confused. Close and remove it.
-        self._socket.setsockopt(zmq.LINGER, ZMQ_LINGER)
-        self._socket.close()
-        self._poller.unregister(self._socket)
-
-    def _socket_send(self, server_identity, payload):
-        pack = [payload, server_identity]
-        self._socket.send_multipart(pack)
-
-    def _run_zmq_poller(self, timeout):
-        socks = dict(self._poller.poll(timeout))
-        if socks.get(self._socket) == zmq.POLLIN:
-            return True
-
-        return None
-
-    def _setup_zmq_socket(self, context, poller, kind, identity):
-        socket = context.socket(kind)
-        poller.register(socket, zmq.POLLIN)
-        socket.setsockopt_string(zmq.IDENTITY, identity)
-        socket.connect(self.multiplex_endpoint)
-        return socket
+        self.backend.close()
