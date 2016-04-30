@@ -15,7 +15,7 @@ def main(endpoint, payload, nmessages):
 
     start = time.time()
     for i in range(nmessages):
-        client.send('0', payload)
+        client.send(payload)
         assert client.recv() == payload
 
     end = time.time()

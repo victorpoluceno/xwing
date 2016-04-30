@@ -6,6 +6,8 @@ import zmq
 
 ZMQ_LINGER = 0
 
+SERVICE_POSITIVE_REPLY = b'+'
+
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +28,8 @@ class SocketClient(object):
 
       >>> from xwing.socket import SocketClient
       >>> client = SocketClient('tcp://localhost:5555', 'client1')
-      >>> client.send('server0', b'ping')
+      >>> client.connect('server0')
+      >>> client.send(b'ping')
       >>> client.recv()
     '''
 
@@ -37,20 +40,19 @@ class SocketClient(object):
         self._context = zmq.Context()
         self._poller = zmq.Poller()
 
-    def send(self, server_identity, data):
+    def send(self, data):
         '''
         Send a request to a Server.
 
-        :param server_identity: The Identity of the destination server.
         :param data: The payload to send to Server.
         '''
-        server_identity = bytes(server_identity, 'utf-8')
-        self._socket_send(server_identity, data)
+        service = bytes(self.service, 'utf-8')
+        self._socket_send(service, data)
         return True
 
-    def send_str(self, server_identity, data, encoding='utf-8'):
+    def send_str(self, data, encoding='utf-8'):
         data = bytes(data, encoding)
-        return self.send(server_identity, data)
+        return self.send(data)
 
     def recv(self, timeout=None):
         '''
@@ -75,9 +77,10 @@ class SocketClient(object):
             self._context, self._poller, zmq.REQ, self.identity)
         self._socket.send(bytes(service, 'utf-8'))
         reply = self._socket.recv()
-        if reply != b'+':
+        if reply != SERVICE_POSITIVE_REPLY:
             raise ConnectionRefusedError() # NOQA
 
+        self.service = service
         return True
 
     def close(self):

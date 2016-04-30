@@ -138,12 +138,14 @@ class Proxy:
 
     def _handle_client_request(self, backend, request):
         # FIXME if server is not known, we need to answer something
-        # need to implement the RFC to make this work
+        # need to implement a way to close connection
         client_identity, _, payload, server_identity = request
         backend.send_multipart(
             [server_identity, b'', client_identity, b'', payload])
 
     def _handle_service_query(self, frontend, query):
         client_identity, _, service_identity = query
+        # TODO the positive answer should be done by the server it self
+        # see: https://tools.ietf.org/html/rfc1078
         reply = b'+' if service_identity in self._servers else b'-'
         frontend.send_multipart([client_identity, b'', reply])
