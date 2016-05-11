@@ -1,24 +1,29 @@
 xwing
 =====
 
-Python 3 implementation of a TCP multiplexer.
+Python 3 implementation of a TCP port service multiplexer.
 
-Xwing is a Python library that helps to distribute connections to a single port to other multiple process.
-
-Xwing uses ZeroMQ as communicaton layer.
+Xwing is a Python library that helps to distribute connections arriving at single ip/port to many services.
 
 Features
 --------
 
 Xwing features:
 
-  * Support to all ZeroMQ protocols.
+  * It is fast, the proxy only knowns about routing sockets, not about data.
   * API componentes designed to be embeded.
+  * Follows the TCP port service multiplexer, RFC 1078.
+  * Support for TCP on frontend and Unix Socket only on backend.
+
+Arquitecture
+------------
+
+Xwing works by exposing a TCP frontend where a client connects and tells what service it wants to comunnicate with. On the backend a server, connects using a UNIX Socket and tell what services it responds for.
 
 Requirements
 ------------
 
-Xwing requires Python 3.4+ and ZeroMQ.
+Xwing requires Python 3.4+.
 
 Usage
 -----
@@ -40,23 +45,25 @@ Server implementation
 
 The serve connects to proxy as a server and start waiting to answer clients. Here is a server implementation::
 
-  from xwing.server import SocketServer
+  from xwing.socket.server import Server
 
-  server = Server("ipc:///tmp/0", "server0")
-  server.bind()
-  ping = server.recv()
-  server.send(pong)
+  server = Server("/var/tmp/xwing.socket", "server0")
+  server.listen()
+  conn = server.accept()
+  ping = conn.recv()
+  conn.send("pong")
 
 Client implementation
 ~~~~~~~~~~~~~~~~~~~~~
 
 Client connects to proxy daemon and send a data. Here is the Client implementation::
 
-  from xwing.client import SocketClient
+  from xwing.socket.client import Client
 
-  client = Client("tcp://localhost:5555")
-  client.send("server0", "ping")
-  print(client.recv())
+  client = Client("localhost:5555")
+  conn = client.connect("server")
+  conn.send("ping")
+  print(conn.recv())
 
 Development
 ----------

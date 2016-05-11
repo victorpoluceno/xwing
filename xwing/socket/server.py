@@ -1,17 +1,13 @@
 import logging
+import uuid
 
-import zmq
-
-from xwing.socket.backend.zmq import ZMQBackend
+from xwing.socket import Connection
+from xwing.socket.backend.rfc1078 import accept, listen
 
 log = logging.getLogger(__name__)
 
-# FIXME this server has a problem, if proxy restart
-# it doesn't know about the server anymore, so this server
-# should sent a ready signal again, but seems like a heartbeating.
 
-
-class SocketServer(object):
+class Server(object):
     '''The Socket Server implementation.
 
     Provides an socket that knows how to connect to a proxy
@@ -25,68 +21,23 @@ class SocketServer(object):
 
     Usage::
 
-      >>> from xwing.socket import SocketServer
-      >>> socket_server = SocketServer('ipc:///tmp/0', 'server0')
-      >>> socket_server.bind()
-      >>> data = socket_server.recv()
-      >>> socket_server.send(data)
+      >>> from xwing.socket.server import Server
+      >>> socket_server = Server('/var/run/xwing.socket', 'server0')
+      >>> socket_server.listen()
+      >>> conn = socket_server.accept()
+      >>> data = conn.recv()
+      >>> conn.send(data)
     '''
-
-    SIGNAL_READY = b"\x01"
 
     def __init__(self, multiplex_endpoint, identity=None):
         self.multiplex_endpoint = multiplex_endpoint
-        self.backend = ZMQBackend(identity)
+        self.identity = str(uuid.uuid1()) if not identity else identity
 
-    @property
-    def identity(self):
-        return self.backend.identity
+    def listen(self):
+        self.sock = listen(self.multiplex_endpoint, self.identity)
 
-    def recv(self, timeout=None):
-        '''Try to recv data. If not data is recv NoData exception will
-        raise.
-
-        :param timeout: Timeout in seconds. `None` meaning forever.
-        '''
-        frames = self.backend.recv_multipart(timeout)
-        if not frames:
-            return None
-
-        self._frames = frames
-        return self._frames[-1]
-
-    def recv_str(self, timeout=None, encoding='utf-8'):
-        data = self.recv(timeout)
-        if encoding:
-            data = data.decode(encoding)
-
-        return data
-
-    def send(self, data):
-        '''Send data to connected client.
-
-        :param data: Data to send.
-        '''
-        # FIXME this state frames mechanics is no good
-        # we need a better aproaching. May be go event closer
-        # to socket API by implemeting an accept method
-        assert self._frames, "Send should always be called after a recv"
-        self._frames[-1] = data
-        self.backend.send_multipart(self._frames)
-        self._frames = None
-        return True
-
-    def send_str(self, data, encoding='utf-8'):
-        if encoding:
-            data = bytes(data, encoding)
-
-        return self.send(data)
+    def accept(self):
+        return Connection(accept(self.sock))
 
     def close(self):
-        self.backend.close()
-
-    def bind(self):
-        self.backend.connect(zmq.DEALER, self.multiplex_endpoint)
-
-        log.info("Sending ready signal to proxy")
-        self.backend.send(self.SIGNAL_READY)
+        self.sock.close()
