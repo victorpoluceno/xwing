@@ -1,18 +1,17 @@
 import logging
+import uuid
 
-import zmq
-
-from xwing.socket.backend.zmq import ZMQBackend
-
+from xwing.socket import Connection
+from xwing.socket.backend.rfc1078 import connect
 
 log = logging.getLogger(__name__)
 
 
-class SocketClient(object):
+class Client(object):
     '''The Socket Client implementation.
 
     Provide a Client that knowns how to connect to a Proxy service
-    send requests and waiting for replies.
+    send and recv data.
 
     :param multiplex_endpoint: Mutliplex service address to connect.
     :type multiplex_endpoint: str
@@ -22,64 +21,20 @@ class SocketClient(object):
 
     Usage::
 
-      >>> from xwing.socket import SocketClient
-      >>> client = SocketClient('tcp://localhost:5555', 'client1')
-      >>> client.connect('server0')
-      >>> client.send(b'ping')
-      >>> client.recv()
+      >>> from xwing.socket.client import Client
+      >>> client = Client('localhost:5555', 'client1')
+      >>> conn = client.connect('server0')
+      >>> conn.send(b'ping')
+      >>> conn.recv()
     '''
-
-    SERVICE_POSITIVE_REPLY = b'+'
 
     def __init__(self, multiplex_endpoint, identity=None):
         self.multiplex_endpoint = multiplex_endpoint
-        self.backend = ZMQBackend(identity)
-
-    @property
-    def identity(self):
-        return self.backend.identity
-
-    def send(self, data):
-        '''
-        Send a request to a Server.
-
-        :param data: The payload to send to Server.
-        '''
-        service = bytes(self.service, 'utf-8')
-        self.backend.send_multipart([data, service])
-        return True
-
-    def send_str(self, data, encoding='utf-8'):
-        data = bytes(data, encoding)
-        return self.send(data)
-
-    def recv(self, timeout=None):
-        '''
-        Recv data from Server.
-
-        :param timeout: Timeout in seconds. `None` meaning forever.
-        '''
-        if not self.backend.poll(timeout):
-            return None
-
-        return self.backend.recv()
-
-    def recv_str(self, timeout=None, encoding='utf-8'):
-        data = self.recv(timeout)
-        if encoding:
-            data = data.decode(encoding)
-
-        return data
+        self.identity = str(uuid.uuid1()) if not identity else identity
 
     def connect(self, service):
-        self.backend.connect(zmq.REQ, self.multiplex_endpoint)
-        self.backend.send(bytes(service, 'utf-8'))
-        reply = self.backend.recv()
-        if reply != self.SERVICE_POSITIVE_REPLY:
-            raise ConnectionRefusedError() # NOQA
-
-        self.service = service
-        return True
+        address, port = self.multiplex_endpoint.split(':')
+        return Connection(connect((address, int(port)), service))
 
     def close(self):
-        self.backend.close()
+        self.sock.close()

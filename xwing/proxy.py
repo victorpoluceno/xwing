@@ -1,27 +1,31 @@
+import os
 import logging
 import threading
+import socket
+import array
+import time
 
-import zmq
 
-
-SIGNAL_READY = b"\x01"  # Signals server is ready
-
-REPLY_SIZE = 5
-CONTROL_REPLY_SIZE = 2
-SERVICE_QUERY_SIZE = 3
-CLIENT_REQUEST_SIZE = 4
-
-POLLING_INTERVAL = 1.0
-
-ZMQ_LINGER = 0
+SERVICE_POSITIVE_ANSWER = b'+'
+BUFFER_SIZE = 4096
 
 log = logging.getLogger(__name__)
+
+
+def join_group():
+    main_thread = threading.currentThread()
+    for t in threading.enumerate():
+        if t is main_thread:
+            continue
+
+        log.debug('joining %s', t.getName())
+        t.join()
 
 
 class Proxy:
     '''The Socket Proxy implementation.
 
-    Provides a Proxy that known how to route messages
+    Provides a Proxy that known how to route sockets
     between clients and servers.
 
     :param frontend_endpoint: Endpoint where clients will connect.
@@ -32,120 +36,113 @@ class Proxy:
 
     Usage::
 
-      >>> from xwing.socket import SocketProxy
-      >>> proxy = SocketProxy('tcp://*:5555', 'ipc:///tmp/0')
+      >>> from xwing import Proxy
+      >>> proxy = Proxy('0.0.0.0:5555', '/var/run/xwing.socket')
       >>> proxy.run()
     '''
 
-    def __init__(self, frontend_endpoint, backend_endpoint,
-                 polling_interval=POLLING_INTERVAL):
+    def __init__(self, frontend_endpoint, backend_endpoint):
         self.frontend_endpoint = frontend_endpoint
         self.backend_endpoint = backend_endpoint
-        self.polling_interval = polling_interval
-
-        self._run_loop = False
-        self._servers = []
-        self._init_zmq_context()
+        self.services = {}
 
     def run(self, forever=True):
         '''Run the server loop'''
+
         self.stop_event = threading.Event()
-        self.thread = threading.Thread(target=self._run_zmq_poller)
-        self.thread.daemon = False
-        self.thread.start()
+
+        address, port = self.frontend_endpoint.split(':')
+        thread_frontend = threading.Thread(target=self.run_frontend,
+                                           args=((address, int(port)),))
+        thread_frontend.daemon = False
+        thread_frontend.start()
+
+        thread_backend = threading.Thread(target=self.run_backend,
+                                          args=(self.backend_endpoint,))
+        thread_backend.daemon = False
+        thread_backend.start()
+
         if forever:
             try:
-                self.thread.join()
+                join_group()
             except KeyboardInterrupt:
                 self.stop()
 
     def stop(self):
         '''Loop stop.'''
         self.stop_event.set()
-        self.thread.join()
-        self._disconnect_zmq_socket()
+        join_group()
 
-    def _disconnect_zmq_socket(self):
-        # To disconnect we need to unplug current socket
-        self._poller_backend.unregister(self._backend)
-        self._poller_proxy.unregister(self._frontend)
-        self._poller_proxy.unregister(self._backend)
+    def run_frontend(self, tcp_address, backlog=10, timeout=0.1):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            sock.bind(tcp_address)
+            sock.listen(backlog)
+            sock.settimeout(timeout)
 
-        self._frontend.setsockopt(zmq.LINGER, ZMQ_LINGER)
-        self._backend.setsockopt(zmq.LINGER, ZMQ_LINGER)
+            while not self.stop_event.isSet():
+                try:
+                    conn, address = sock.accept()
+                except socket.timeout:
+                    time.sleep(timeout)
+                    continue
 
-        self._frontend.close()
-        self._backend.close()
+                service = conn.recv(BUFFER_SIZE)
+                if not service:
+                    break
 
-    def _init_zmq_context(self):
-        self._context = zmq.Context()
-        self._poller_backend = zmq.Poller()
-        self._poller_proxy = zmq.Poller()
+                if service not in self.services:
+                    conn.sendall(b'-Service not found\r\n')
+                    continue
 
-    def _run_zmq_poller(self):
-        self._frontend = frontend = self._context.socket(zmq.ROUTER)
-        self._frontend.bind(self.frontend_endpoint)
+                # detach and pack FD into a array
+                fd = conn.detach()
+                fds = array.array("I", [fd])
 
-        self._backend = backend = self._context.socket(zmq.ROUTER)
-        self._backend.bind(self.backend_endpoint)
+                try:
+                    # Send FD to server connection
+                    server_conn = self.services[service]
+                    server_conn.sendmsg([b'1'], [(socket.SOL_SOCKET,
+                                                  socket.SCM_RIGHTS, fds)])
+                except BrokenPipeError:  # NOQA
+                    # If connections is broken, the server is gone
+                    # so we need to remove it from services
+                    del self.services[service]
+                    conn = socket.fromfd(fd, socket.AF_INET,
+                                         socket.SOCK_STREAM)
+                    conn.sendall(b'-Service not found\r\n')
+                    conn.close()
 
-        self._poller_backend.register(self._backend, zmq.POLLIN)
-        self._poller_proxy.register(self._frontend, zmq.POLLIN)
-        self._poller_proxy.register(self._backend, zmq.POLLIN)
+    def run_backend(self, unix_address, backlog=10, timeout=0.1):
+        try:
+            # Make sure that there is no zombie socket
+            os.unlink(unix_address)
+        except OSError:
+            pass
 
-        while not self.stop_event.isSet():
-            # We only start polling on both sockets if at least
-            # one server has already been seen
-            if self._servers:
-                poller = self._poller_proxy
-            else:
-                poller = self._poller_backend
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.bind(unix_address)
+            sock.listen(backlog)
+            sock.settimeout(timeout)
 
-            socks = dict(poller.poll(self.polling_interval * 1000))
-            if socks.get(frontend) == zmq.POLLIN:
-                frames = frontend.recv_multipart()
-                frames_size = len(frames)
-                if frames_size == SERVICE_QUERY_SIZE:
-                    self._handle_service_query(frontend, frames)
-                elif frames_size == CLIENT_REQUEST_SIZE:
-                    self._handle_client_request(backend, frames)
+            while not self.stop_event.isSet():
+                try:
+                    conn, address = sock.accept()
+                except socket.timeout:
+                    time.sleep(timeout)
+                    continue
 
-            if socks.get(backend) == zmq.POLLIN:
-                frames = backend.recv_multipart()
-                frames_size = len(frames)
+                service = conn.recv(BUFFER_SIZE)
+                if not service:  # connection was closed
+                    break
 
-                assert frames_size in [REPLY_SIZE, CONTROL_REPLY_SIZE]
-                if frames_size == REPLY_SIZE:
-                    self._handle_server_reply(frontend, frames)
-                elif frames_size == CONTROL_REPLY_SIZE:
-                    self._handle_server_control(frames)
+                if self.services.get(service):
+                    conn.sendall(b'-Service already exists\r\n')
+                    continue
 
-    def _handle_server_reply(self, frontend, reply):
-        # Handle a reply from a server to a client.
-        # Message format: [server_identity, '', client_identity, '', payload]
-        client_identity, _, payload = reply[2:]
-        frontend.send_multipart([client_identity, _, payload])
-
-    def _handle_server_control(self, control):
-        # Handle control messages from server to proxy.
-        # Message format: [server_identity, payload]
-        server_identity, payload = control
-        assert payload == SIGNAL_READY
-
-        log.debug("Got server ready signal from: %s" % server_identity)
-        if server_identity not in self._servers:
-            self._servers.append(server_identity)
-
-    def _handle_client_request(self, backend, request):
-        # FIXME if server is not known, we need to answer something
-        # need to implement a way to close connection
-        client_identity, _, payload, server_identity = request
-        backend.send_multipart(
-            [server_identity, b'', client_identity, b'', payload])
-
-    def _handle_service_query(self, frontend, query):
-        client_identity, _, service_identity = query
-        # TODO the positive answer should be done by the server it self
-        # see: https://tools.ietf.org/html/rfc1078
-        reply = b'+' if service_identity in self._servers else b'-'
-        frontend.send_multipart([client_identity, b'', reply])
+                # TODO we should detach the fd from connection
+                # can it be that conn variable will be collected
+                # and the connection will be closed?
+                self.services[service] = conn
+                conn.sendall(SERVICE_POSITIVE_ANSWER)

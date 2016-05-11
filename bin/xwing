@@ -12,9 +12,9 @@ log = logging.getLogger()
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Xwing proxy daemon')
     parser.add_argument("--address", help="frontend address",
-                        default='tcp://127.0.0.1:5555')
+                        default='127.0.0.1:5555')
     parser.add_argument("--backend_address", help="backend address",
-                        default='ipc:///tmp/0')
+                        default='/var/tmp/xwing.socket')
     parser.add_argument("--loglevel", help="set loglevel", default='INFO',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'])
     args = parser.parse_args()
