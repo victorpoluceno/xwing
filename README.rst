@@ -1,18 +1,24 @@
 xwing
 =====
 
-Python 3 implementation of a TCP multiplexer.
+Python 3 implementation of a TCP port service multiplexer.
 
-Xwing is a Python library that helps to distribute connections to a single port to other multiple process.
+Xwing is a Python library that helps to distribute connections arriving at single ip/port to many services.
 
 Features
 --------
 
 Xwing features:
 
-  * It is fast, the proxy only knowns about routing sockets, not data.
+  * It is fast, the proxy only knowns about routing sockets, not about data.
   * API componentes designed to be embeded.
   * Follows the TCP port service multiplexer, RFC 1078.
+  * Support for TCP on frontend and Unix Socket only on backend.
+
+Arquitecture
+------------
+
+Xwing works by exposing a TCP frontend where a client connects and tells what service it wants to comunnicate with. On the backend a server, connects using a UNIX Socket and tell what services it responds for.
 
 Requirements
 ------------
