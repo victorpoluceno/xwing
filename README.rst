@@ -10,10 +10,13 @@ Features
 
 Xwing features:
 
-  * It is fast, the proxy only knowns about routing sockets, not about data.
-  * API componentes designed to be embeded.
-  * Follows the TCP port service multiplexer, RFC 1078.
-  * Support for TCP on frontend and Unix Socket only on backend.
+  * Fast. Socket connections are routed, not data.
+  * Standartized. Follows the TCP port service multiplexer protocol, RFC 1078.
+  * Simple. Minimal for humans API.
+  * Portable. API componentes designed to be easily embeded.
+  * Powerfull. Universal socket like API, support for sync/async style.
+  * Extensible...
+  * Interoperable...
 
 Arquitecture
 ------------
