@@ -34,3 +34,6 @@ class Connection:
             data = bytes(data, encoding)
 
         return self.send(data)
+
+    def close(self):
+        self.sock.close()
