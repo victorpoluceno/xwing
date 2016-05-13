@@ -35,6 +35,3 @@ class Client(object):
     def connect(self, service):
         address, port = self.multiplex_endpoint.split(':')
         return Connection(connect((address, int(port)), service))
-
-    def close(self):
-        self.sock.close()
