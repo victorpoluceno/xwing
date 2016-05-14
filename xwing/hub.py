@@ -1,9 +1,10 @@
 import os
 import logging
-import threading
 import socket
 import array
-import time
+import asyncio
+import signal
+import functools
 
 
 SERVICE_POSITIVE_ANSWER = b'+'
@@ -12,20 +13,10 @@ BUFFER_SIZE = 4096
 log = logging.getLogger(__name__)
 
 
-def join_group():
-    main_thread = threading.currentThread()
-    for t in threading.enumerate():
-        if t is main_thread:
-            continue
+class Hub:
+    '''The Socket Hub implementation.
 
-        log.debug('joining %s', t.getName())
-        t.join()
-
-
-class Proxy:
-    '''The Socket Proxy implementation.
-
-    Provides a Proxy that known how to route sockets
+    Provides a Hub that known how to connect sockets
     between clients and servers.
 
     :param frontend_endpoint: Endpoint where clients will connect.
@@ -36,56 +27,53 @@ class Proxy:
 
     Usage::
 
-      >>> from xwing import Proxy
-      >>> proxy = Proxy('0.0.0.0:5555', '/var/run/xwing.socket')
-      >>> proxy.run()
+      >>> from xwing.hub import Hub
+      >>> hub = Hub('0.0.0.0:5555', '/var/run/xwing.socket')
+      >>> hub.run()
     '''
 
     def __init__(self, frontend_endpoint, backend_endpoint):
         self.frontend_endpoint = frontend_endpoint
         self.backend_endpoint = backend_endpoint
+        self.loop = asyncio.get_event_loop()
+        self.stop_event = asyncio.Event()
         self.services = {}
 
     def run(self, forever=True):
         '''Run the server loop'''
+        self.tasks = [
+            asyncio.ensure_future(self.run_frontend(self.frontend_endpoint)),
+            asyncio.ensure_future(self.run_backend(self.backend_endpoint))
+        ]
 
-        self.stop_event = threading.Event()
-
-        address, port = self.frontend_endpoint.split(':')
-        thread_frontend = threading.Thread(target=self.run_frontend,
-                                           args=((address, int(port)),))
-        thread_frontend.daemon = False
-        thread_frontend.start()
-
-        thread_backend = threading.Thread(target=self.run_backend,
-                                          args=(self.backend_endpoint,))
-        thread_backend.daemon = False
-        thread_backend.start()
-
-        if forever:
-            try:
-                join_group()
-            except KeyboardInterrupt:
-                self.stop()
+        try:
+            self.loop.run_until_complete(asyncio.wait(self.tasks))
+        except KeyboardInterrupt:
+            self.stop()
 
     def stop(self):
         '''Loop stop.'''
         self.stop_event.set()
-        join_group()
+        pending = asyncio.Task.all_tasks()
+        self.loop.run_until_complete(asyncio.gather(*pending))
+        self.loop.close()
 
+    @asyncio.coroutine
     def run_frontend(self, tcp_address, backlog=10, timeout=0.1):
+        log.info('Running frontend loop')
+        address, port = tcp_address.split(':')
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            sock.bind(tcp_address)
+            sock.bind((address, int(port)))
             sock.listen(backlog)
             sock.settimeout(timeout)
 
-            while not self.stop_event.isSet():
+            while not self.stop_event.is_set():
                 try:
-                    conn, address = sock.accept()
+                    conn, address = yield from self.loop.sock_accept(sock)
                 except socket.timeout:
-                    time.sleep(timeout)
+                    yield from asyncio.sleep(timeout)
                     continue
 
                 service = conn.recv(BUFFER_SIZE)
@@ -114,7 +102,9 @@ class Proxy:
                     conn.sendall(b'-Service not found\r\n')
                     conn.close()
 
+    @asyncio.coroutine
     def run_backend(self, unix_address, backlog=10, timeout=0.1):
+        log.info('Running backend loop')
         try:
             # Make sure that there is no zombie socket
             os.unlink(unix_address)
@@ -126,11 +116,11 @@ class Proxy:
             sock.listen(backlog)
             sock.settimeout(timeout)
 
-            while not self.stop_event.isSet():
+            while not self.stop_event.is_set():
                 try:
-                    conn, address = sock.accept()
+                    conn, address = yield from self.loop.sock_accept(sock)
                 except socket.timeout:
-                    time.sleep(timeout)
+                    yield from asyncio.sleep(timeout)
                     continue
 
                 service = conn.recv(BUFFER_SIZE)

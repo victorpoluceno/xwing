@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 import pytest
 
-from xwing.proxy import Proxy
+from xwing.hub import Hub
 from xwing.socket.client import Client
 from xwing.socket.server import Server
 
@@ -27,8 +27,8 @@ def start_echo_server(stop_event):
 
 
 def setup_module(module):
-    module.proxy = proxy = Proxy(FRONTEND_ADDRESS, BACKEND_ADDRESS)
-    proxy.run(forever=False)
+    module.hub = hub = Hub(FRONTEND_ADDRESS, BACKEND_ADDRESS)
+    hub.run(forever=False)
     time.sleep(0.5)
 
     module.stop_event = stop_event = threading.Event()
@@ -40,7 +40,7 @@ def setup_module(module):
 def teardown_module(module):
     module.stop_event.set()
     module.thread.join()
-    module.proxy.stop()
+    module.hub.stop()
 
 
 class TestIntegration:
