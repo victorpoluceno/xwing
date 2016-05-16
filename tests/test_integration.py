@@ -1,6 +1,7 @@
 import sys
 sys.path.append('.')
 
+import multiprocessing
 import time
 import threading
 import logging
@@ -8,7 +9,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 import pytest
 
-from xwing.proxy import Proxy
+from xwing.hub import Hub
 from xwing.socket.client import Client
 from xwing.socket.server import Server
 
@@ -26,21 +27,29 @@ def start_echo_server(stop_event):
         conn.send(conn.recv())
 
 
-def setup_module(module):
-    module.proxy = proxy = Proxy(FRONTEND_ADDRESS, BACKEND_ADDRESS)
-    proxy.run(forever=False)
-    time.sleep(0.5)
+def start_hub():
+    hub = Hub(FRONTEND_ADDRESS, BACKEND_ADDRESS)
+    hub.run()
 
-    module.stop_event = stop_event = threading.Event()
+
+def setup_module(module):
+    module.p = p = multiprocessing.Process(target=start_hub)
+    p.start()
+
+    # We need this sleep so hub can get ready to accept connections
+    # To remove this we need to implement a retry support
+    time.sleep(5)
+
+    module.stop_server = stop_server = threading.Event()
     module.thread = threading.Thread(target=start_echo_server,
-                                     args=(stop_event,), daemon=False)
+                                     args=(stop_server,), daemon=False)
     module.thread.start()
 
 
 def teardown_module(module):
-    module.stop_event.set()
+    module.stop_server.set()
     module.thread.join()
-    module.proxy.stop()
+    module.p.terminate()
 
 
 class TestIntegration:

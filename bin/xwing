@@ -2,7 +2,7 @@
 import argparse
 import logging
 
-from xwing.proxy import Proxy
+from xwing.hub import Hub
 
 
 logging.basicConfig()
@@ -10,7 +10,7 @@ log = logging.getLogger()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Xwing proxy daemon')
+    parser = argparse.ArgumentParser(description='Xwing hub daemon')
     parser.add_argument("--address", help="frontend address",
                         default='127.0.0.1:5555')
     parser.add_argument("--backend_address", help="backend address",
@@ -20,9 +20,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     log.setLevel(args.loglevel)
 
-    proxy = Proxy(args.address, args.backend_address)
+    hub = Hub(args.address, args.backend_address)
 
     try:
-        proxy.run()
+        hub.run()
     except KeyboardInterrupt:
         log.info('Terminated by user.')
