@@ -3,8 +3,6 @@ import logging
 import socket
 import array
 import asyncio
-import signal
-import functools
 
 
 SERVICE_POSITIVE_ANSWER = b'+'
