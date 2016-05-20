@@ -28,10 +28,11 @@ class Client(object):
       >>> conn.recv()
     '''
 
-    def __init__(self, multiplex_endpoint, identity=None):
+    def __init__(self, loop, multiplex_endpoint, identity=None):
+        self.loop = loop
         self.multiplex_endpoint = multiplex_endpoint
         self.identity = str(uuid.uuid1()) if not identity else identity
 
     def connect(self, service):
         address, port = self.multiplex_endpoint.split(':')
-        return Connection(connect((address, int(port)), service))
+        return Connection(self.loop, connect((address, int(port)), service))
