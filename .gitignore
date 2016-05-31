@@ -9,3 +9,5 @@ dist
 *.egg-info
 *.eggs
 .vagrant
+Vagrantfile
+env_linux
