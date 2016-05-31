@@ -4,7 +4,6 @@ import socket
 import array
 import asyncio
 
-
 SERVICE_POSITIVE_ANSWER = b'+'
 BUFFER_SIZE = 4096
 

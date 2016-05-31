@@ -29,15 +29,17 @@ class Server(object):
       >>> conn.send(data)
     '''
 
-    def __init__(self, multiplex_endpoint, identity=None):
+    def __init__(self, loop, multiplex_endpoint, identity=None):
+        self.loop = loop
         self.multiplex_endpoint = multiplex_endpoint
         self.identity = str(uuid.uuid1()) if not identity else identity
 
-    def listen(self):
-        self.sock = listen(self.multiplex_endpoint, self.identity)
+    async def listen(self):
+        self.sock = await listen(self.loop, self.multiplex_endpoint,
+                                 self.identity)
 
-    def accept(self):
-        return Connection(accept(self.sock))
+    async def accept(self):
+        return Connection(self.loop, await accept(self.sock))
 
     def close(self):
         self.sock.close()
