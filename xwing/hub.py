@@ -36,15 +36,21 @@ class Hub:
         self.stop_event = asyncio.Event()
         self.services = {}
 
-    def run(self, forever=True):
+    def run(self):
         '''Run the server loop'''
-        self.tasks = [
+        tasks = [
             asyncio.ensure_future(self.run_frontend(self.frontend_endpoint)),
             asyncio.ensure_future(self.run_backend(self.backend_endpoint))
         ]
 
         try:
-            self.loop.run_until_complete(asyncio.wait(self.tasks))
+            done, pending = self.loop.run_until_complete(asyncio.wait(
+                tasks, return_when=asyncio.FIRST_EXCEPTION))
+
+            # If a exception happned on any of waited tasks
+            # this forces the exception to buble up
+            for future in done:
+                future.result()
         except KeyboardInterrupt:
             self.stop()
 
