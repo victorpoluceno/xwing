@@ -39,13 +39,13 @@ async def accept(sock):
     return client
 
 
-def connect(tcp_address, service, tcp_nodelay=True):
+async def connect(loop, tcp_address, service, tcp_nodelay=True):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if tcp_nodelay:
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
     sock.connect(tcp_address)
-    sock.sendall(bytes(service, encoding='utf-8'))
+    await loop.sock_sendall(sock, bytes(service, encoding='utf-8'))
     response = sock.recv(BUFFER_SIZE)
     if response != SERVICE_POSITIVE_ANSWER:
         raise ConnectionError(response.decode().strip())  # NOQA

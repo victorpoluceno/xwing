@@ -8,7 +8,7 @@ from xwing.socket.client import Client
 
 async def main(loop, endpoint):
     client = Client(loop, endpoint)
-    conn = client.connect('server0')
+    conn = await client.connect('server0')
 
     for i in range(100):
         await conn.send(b'x')
