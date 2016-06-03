@@ -61,8 +61,7 @@ class Hub:
         self.loop.run_until_complete(asyncio.gather(*pending))
         self.loop.close()
 
-    @asyncio.coroutine
-    def run_frontend(self, tcp_address, backlog=10, timeout=0.1):
+    async def run_frontend(self, tcp_address, backlog=10, timeout=0.1):
         log.info('Running frontend loop')
         address, port = tcp_address.split(':')
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -74,17 +73,17 @@ class Hub:
 
             while not self.stop_event.is_set():
                 try:
-                    conn, address = yield from self.loop.sock_accept(sock)
+                    conn, address = await self.loop.sock_accept(sock)
                 except socket.timeout:
-                    yield from asyncio.sleep(timeout)
+                    await asyncio.sleep(timeout)
                     continue
 
-                service = conn.recv(BUFFER_SIZE)
+                service = await self.loop.sock_recv(conn, BUFFER_SIZE)
                 if not service:
                     break
 
                 if service not in self.services:
-                    conn.sendall(b'-Service not found\r\n')
+                    self.loop.sock_sendall(conn, b'-Service not found\r\n')
                     continue
 
                 # detach and pack FD into a array
@@ -105,8 +104,7 @@ class Hub:
                     conn.sendall(b'-Service not found\r\n')
                     conn.close()
 
-    @asyncio.coroutine
-    def run_backend(self, unix_address, backlog=10, timeout=0.1):
+    async def run_backend(self, unix_address, backlog=10, timeout=0.1):
         log.info('Running backend loop')
         try:
             # Make sure that there is no zombie socket
@@ -121,12 +119,12 @@ class Hub:
 
             while not self.stop_event.is_set():
                 try:
-                    conn, address = yield from self.loop.sock_accept(sock)
+                    conn, address = await self.loop.sock_accept(sock)
                 except socket.timeout:
-                    yield from asyncio.sleep(timeout)
+                    await asyncio.sleep(timeout)
                     continue
 
-                service = conn.recv(BUFFER_SIZE)
+                service = await self.loop.sock_recv(conn, BUFFER_SIZE)
                 if not service:  # connection was closed
                     break
 
@@ -138,4 +136,4 @@ class Hub:
                 # can it be that conn variable will be collected
                 # and the connection will be closed?
                 self.services[service] = conn
-                conn.sendall(SERVICE_POSITIVE_ANSWER)
+                await self.loop.sock_sendall(conn, SERVICE_POSITIVE_ANSWER)
