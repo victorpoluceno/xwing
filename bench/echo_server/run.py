@@ -8,7 +8,7 @@ from xwing.socket.client import Client
 
 async def connect_and_send(loop, endpoint, payload, start, duration):
     client = Client(loop, endpoint)
-    conn = client.connect('server0')
+    conn = await client.connect('server0')
 
     n = 0
     while time.monotonic() - start < duration:

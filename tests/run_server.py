@@ -5,7 +5,6 @@ from xwing.socket.server import Server
 BACKEND_ADDRESS = '/var/tmp/xwing.socket'
 
 
-
 async def start_server(loop):
     server = Server(loop, BACKEND_ADDRESS, 'server0')
     await server.listen()

@@ -39,7 +39,7 @@ class Server(object):
                                  self.identity)
 
     async def accept(self):
-        return Connection(self.loop, await accept(self.sock))
+        return Connection(self.loop, await accept(self.loop, self.sock))
 
     def close(self):
         self.sock.close()

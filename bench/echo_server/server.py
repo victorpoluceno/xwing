@@ -24,7 +24,7 @@ async def handle_client(loop, conn):
 
 async def run(loop, hub_endpoint, identity):
     server = Server(loop, hub_endpoint, identity)
-    await server.listen(10)
+    await server.listen()
 
     while True:
         conn = await server.accept()
