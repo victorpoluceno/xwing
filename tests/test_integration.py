@@ -7,8 +7,6 @@ import subprocess
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-import pytest
-
 from xwing.socket.client import Client
 
 
@@ -16,9 +14,11 @@ FRONTEND_ADDRESS = '127.0.0.1:5555'
 
 
 def setup_module(module):
-    module.hub_process = subprocess.Popen('bin/xwing'); time.sleep(1)
+    module.hub_process = subprocess.Popen('bin/xwing')
+    time.sleep(1)
     module.server_process = subprocess.Popen(['python', 'tests/run_server.py'])
-    
+
+
 def teardown_module(module):
     module.hub_process.kill()
     module.server_process.kill()
@@ -28,37 +28,41 @@ class TestIntegration:
 
     @classmethod
     def setup_class(cls):
-        loop = asyncio.get_event_loop()
-        client = Client(loop, FRONTEND_ADDRESS)
+        cls.loop = asyncio.get_event_loop()
+        cls.client = Client(cls.loop, FRONTEND_ADDRESS)
 
         async def connect(cls):
             while True:
                 try:
-                    cls.connection = await client.connect('server0')
+                    cls.connection = await cls.client.connect('server0')
                 except ConnectionError:
                     await asyncio.sleep(1)
                     continue
                 else:
                     break
 
-        loop.run_until_complete(asyncio.wait_for(connect(cls), 30))
+        cls.loop.run_until_complete(asyncio.wait_for(connect(cls), 30))
 
     @classmethod
     def teardown_class(cls):
         cls.connection.close()
 
-    @pytest.mark.asyncio
-    async def test_auto_identity(self):
-        assert self.client.identity
+    def test_send_and_recv_str(self):
+        async def run(self):
+            data = 'ping'
+            await self.connection.send_str(data)
+            await self.connection.recv_str()
+            return True
 
-    @pytest.mark.asyncio
-    async def test_send_and_recv_str(self):
-        data = 'ping'
-        await self.connection.send_str(data)
-        assert await self.connection.recv_str() == data
+        event_loop = asyncio.get_event_loop()
+        assert event_loop.run_until_complete(run(self))
 
-    @pytest.mark.asyncio
-    async def test_send_and_recv(self):
-        data = b'ping'
-        await self.connection.send(data)
-        assert await self.connection.recv() == data
+    def test_send_and_recv(self):
+        async def run(self):
+            data = b'ping'
+            await self.connection.send(data)
+            await self.connection.recv()
+            return True
+
+        event_loop = asyncio.get_event_loop()
+        assert event_loop.run_until_complete(run(self))

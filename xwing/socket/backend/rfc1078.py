@@ -18,7 +18,7 @@ async def listen(loop, unix_address, service):
     return sock
 
 
-async def accept(sock):
+async def accept(loop, sock):
     while True:
         try:
             _, ancdata, flags, addr = sock.recvmsg(1, BUFFER_SIZE)
@@ -33,12 +33,9 @@ async def accept(sock):
     fda.frombytes(cmsg_data)
 
     client = socket.fromfd(fda[0], socket.AF_INET, socket.SOCK_STREAM)
-    # This socket needs to be nonblocking as it is
-    # on sent by client to hub frontend
-    client.setblocking(True)
+    client.setblocking(False)
 
-    # This doesn't seems to work well with asyncio it blocks.
-    client.sendall(SERVICE_POSITIVE_ANSWER)
+    await loop.sock_sendall(client, SERVICE_POSITIVE_ANSWER)
     return client
 
 
@@ -47,7 +44,7 @@ async def connect(loop, tcp_address, service, tcp_nodelay=True):
     if tcp_nodelay:
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
-    sock.setblocking(True)
+    sock.setblocking(False)
     await loop.sock_connect(sock, tcp_address)
     await loop.sock_sendall(sock, bytes(service, encoding='utf-8'))
     response = await loop.sock_recv(sock, BUFFER_SIZE)
