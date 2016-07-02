@@ -8,13 +8,12 @@ from xwing.mailbox.outbound import Outbound
 
 class Mailbox:
 
-    def __init__(self, hub_backend, hub_frontend, loop):
+    def __init__(self, hub_backend, loop, name):
         self.loop = loop
-        self.hub_frontend = hub_frontend
         self.hub_backend = hub_backend
-        self.identity = str(uuid.uuid1())
+        self.identity = name if name else str(uuid.uuid1())
         self.inbound = Inbound(self.loop, self.hub_backend, self.identity)
-        self.outbound = Outbound(self.loop, self.hub_frontend, self.identity)
+        self.outbound = Outbound(self.loop, self.identity)
 
     def start(self):
         self.loop.create_task(self.inbound.start())
@@ -35,16 +34,15 @@ class Mailbox:
 
 class Node:
 
-    def __init__(self, loop, hub_frontend, hub_backend):
+    def __init__(self, loop, hub_backend='/var/tmp/xwing.socket'):
         self.loop = loop
-        self.hub_frontend = hub_frontend
         self.hub_backend = hub_backend
         self.mailbox_list = []
         self.tasks = []
 
-    def spawn(self, fn, *args):
+    def spawn(self, fn, *args, name=None):
         # Create a mailbox for my upper_actor and schedule it to run
-        mailbox = Mailbox(self.hub_backend, self.hub_frontend, self.loop)
+        mailbox = Mailbox(self.hub_backend, self.loop, name)
         mailbox.start()
 
         self.tasks.append(self.loop.create_task(fn(mailbox, *args)))
