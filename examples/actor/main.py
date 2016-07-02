@@ -2,7 +2,7 @@ import asyncio
 import sys
 sys.path.append('.')  # NOQA
 
-from examples.actor import Node
+from xwing.mailbox import Node
 
 
 async def pong_actor(mailbox):
@@ -22,10 +22,6 @@ if __name__ == '__main__':
 
     # Start a actor node by which we can spawn actors
     node = Node(loop, hub_frontend, hub_backend)
-
-    # Spawn an pong actor and get its id
-    pong_id = node.spawn(pong_actor)
+    pong_id = node.spawn(pong_actor)  # Spawn an pong actor and get its id
     node.spawn(ping_actor, pong_id)
-    node.run()
-
-    loop.close()
+    node.run_until_complete()
