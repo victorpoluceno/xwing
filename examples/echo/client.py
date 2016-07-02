@@ -1,22 +1,20 @@
-import sys
-sys.path.append('.')
 import asyncio
-import time
+import sys
+sys.path.append('.')  # NOQA
 
-from xwing.socket.client import Client
+from xwing.mailbox import Node
 
 
-async def main(loop, endpoint):
-    client = Client(loop, endpoint)
-    conn = await client.connect('server0')
-
+async def echo_client(mailbox, server):
     for i in range(100):
-        await conn.send(b'x')
-        print('Echo received: %r' % await conn.recv())
+        await mailbox.send(server, b'x')
+        _, data = await mailbox.recv()
+        print('Echo received:', data)
 
 
 if __name__ == '__main__':
     # python examples/echo/client.py
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(loop, "localhost:5555"))
-    loop.close()
+    node = Node(loop)
+    node.spawn(echo_client, 'echo_server')
+    node.run_until_complete()

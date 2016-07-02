@@ -5,8 +5,9 @@ from xwing.socket.client import Client
 
 class Outbound(object):
 
-    def __init__(self, loop, hub_frontend, identity):
-        self.client = Client(loop, hub_frontend, identity)
+    def __init__(self, loop, identity):
+        # FIXME need to fix this fixed hub address
+        self.client = Client(loop, '127.0.0.1:5555', identity)
         self.connections = {}  # TODO add pool with max size
         self.stop_event = asyncio.Event()
 

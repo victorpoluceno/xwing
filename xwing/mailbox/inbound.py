@@ -27,7 +27,7 @@ class Inbound(object):
 
     async def accept_loop(self):
         while not self.stop_event.is_set():
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.001)
             try:
                 conn = await asyncio.wait_for(
                     self.server.accept(), 1.0)
@@ -38,11 +38,13 @@ class Inbound(object):
 
     async def recv_loop(self):
         while not self.stop_event.is_set():
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.001)
             for conn in self.connections:
                 try:
                     data = await asyncio.wait_for(
-                        conn.recv(), 1.0)
+                        conn.recv(), 5.0)
+                    if not data:
+                        continue
                 except asyncio.TimeoutError:
                     continue
 
