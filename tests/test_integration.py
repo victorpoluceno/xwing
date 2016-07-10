@@ -8,6 +8,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 from xwing.socket.client import Client
+from xwing.mailbox import run, spawn
 
 
 FRONTEND_ADDRESS = '127.0.0.1:5555'
@@ -24,7 +25,7 @@ def teardown_module(module):
     module.server_process.kill()
 
 
-class TestIntegration:
+class TestSocket:
 
     @classmethod
     def setup_class(cls):
@@ -66,3 +67,19 @@ class TestIntegration:
 
         event_loop = asyncio.get_event_loop()
         assert event_loop.run_until_complete(run(self))
+
+
+class TestMailbox(object):
+
+    def test_send_and_recv(self):
+        async def echo_server(mailbox):
+            message, pid = await mailbox.recv()
+            await mailbox.send(pid, message)
+
+        async def echo_client(mailbox, pid_server):
+            await mailbox.send(pid_server, 'hello', mailbox.pid)
+            await mailbox.recv()
+
+        pid = spawn(echo_server)
+        spawn(echo_client, pid)
+        run()
