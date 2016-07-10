@@ -1,4 +1,6 @@
 import asyncio
+import logging
+log = logging.getLogger(__name__)
 
 from xwing.socket.server import Server
 
@@ -17,7 +19,7 @@ class Inbound(object):
         await self.server.listen()
         self.loop.create_task(self.accept_loop())
         self.loop.create_task(self.recv_loop())
-        print('%s is listening.' % self.identity)
+        log.info('%s is listening.' % self.identity)
 
     def stop(self):
         self.stop_event.set()

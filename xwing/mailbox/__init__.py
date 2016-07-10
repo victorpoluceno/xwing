@@ -6,11 +6,23 @@ from xwing.mailbox.inbound import Inbound
 from xwing.mailbox.outbound import Outbound
 
 
-class Mailbox:
+def resolve(name_or_pid):
+    if isinstance(name_or_pid, str):
+        if '@' in name_or_pid:
+            name, hub_address = name_or_pid.split('@')
+            return hub_address, name
+        else:
+            return '127.0.0.1', name_or_pid
 
-    def __init__(self, hub_backend, loop, name):
-        self.loop = loop
+    return name_or_pid
+
+
+class Mailbox(object):
+
+    def __init__(self, hub_frontend, hub_backend, loop, name):
         self.hub_backend = hub_backend
+        self.hub_frontend = hub_frontend
+        self.loop = loop
         self.identity = name if name else str(uuid.uuid1())
         self.inbound = Inbound(self.loop, self.hub_backend, self.identity)
         self.outbound = Outbound(self.loop, self.identity)
@@ -20,34 +32,40 @@ class Mailbox:
 
     def stop(self):
         self.inbound.stop()
-        self.outbound.stop()
+
+    @property
+    def pid(self):
+        return self.hub_frontend, self.identity
 
     async def recv(self):
         payload = await self.inbound.recv()
-        sender, message = pickle.loads(payload)
-        return sender, message
+        return pickle.loads(payload)
 
-    async def send(self, identity, message):
-        payload = pickle.dumps((self.identity, message))
-        await self.outbound.send(identity, payload)
+    async def send(self, name_or_pid, *args):
+        payload = pickle.dumps(args)
+        pid = resolve(name_or_pid)
+        await self.outbound.send(pid, payload)
 
 
-class Node:
+class Node(object):
 
-    def __init__(self, loop, hub_backend='/var/tmp/xwing.socket'):
-        self.loop = loop
+    def __init__(self, loop=None, hub_frontend='127.0.0.1',
+                 hub_backend='/var/tmp/xwing.socket'):
+        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.hub_frontend = hub_frontend
         self.hub_backend = hub_backend
         self.mailbox_list = []
         self.tasks = []
 
     def spawn(self, fn, *args, name=None):
         # Create a mailbox for my upper_actor and schedule it to run
-        mailbox = Mailbox(self.hub_backend, self.loop, name)
+        mailbox = Mailbox(self.hub_frontend, self.hub_backend,
+                          self.loop, name)
         mailbox.start()
 
         self.tasks.append(self.loop.create_task(fn(mailbox, *args)))
         self.mailbox_list.append(mailbox)
-        return mailbox.identity
+        return mailbox.pid
 
     def run(self):
         try:
@@ -73,3 +91,13 @@ class Node:
         pending = asyncio.Task.all_tasks()
         self.loop.run_until_complete(asyncio.wait(pending))
         self.loop.close()
+
+node = Node()
+
+
+def spawn(f, *args, name=None):
+    return node.spawn(f, *args, name=name)
+
+
+def run():
+    node.run_until_complete()
