@@ -4,6 +4,13 @@ import asyncio
 
 BUFFER_SIZE = 4096
 SERVICE_POSITIVE_ANSWER = b'+'
+SERVICE_PING = b'!'
+
+# FIXME implement a shared buffer beteween listening and
+# accept, this way listening may get pings and accept
+# may get its file descriptors, avoiding this way the
+# problem that a socket not issuing accepts may hold
+# a service id forever.
 
 
 async def listen(loop, unix_address, service):
@@ -21,7 +28,19 @@ async def listen(loop, unix_address, service):
 async def accept(loop, sock):
     while True:
         try:
-            _, ancdata, flags, addr = sock.recvmsg(1, BUFFER_SIZE)
+            data = sock.recvmsg(1, BUFFER_SIZE)
+            # In order to be able to tell if a server is alive or not
+            # the hub send a ping message to server in case some one
+            # try to connect using same service name. In this case
+            # We can just ignore this data.
+            #
+            # Be aware that current implementation will only allow
+            # this ping mechancis to work after user start accepting
+            # connections, so a Server listening without accepting
+            # will hold this service forever.
+            if data[0] == SERVICE_PING:
+                continue
+            _, ancdata, flags, addr = data
             cmsg_level, cmsg_type, cmsg_data = ancdata[0]
         except BlockingIOError:
             await asyncio.sleep(0.1)

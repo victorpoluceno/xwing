@@ -5,6 +5,7 @@ import array
 import asyncio
 
 SERVICE_POSITIVE_ANSWER = b'+'
+SERVICE_PING = b'!'
 BUFFER_SIZE = 4096
 
 log = logging.getLogger(__name__)
@@ -128,9 +129,17 @@ class Hub:
                 if not service:  # connection was closed
                     break
 
-                if self.services.get(service):
-                    conn.sendall(b'-Service already exists\r\n')
-                    continue
+                server_conn = self.services.get(service)
+                if server_conn:
+                    try:
+                        server_conn.sendall(SERVICE_PING)
+                    except BrokenPipeError:  # NOQA
+                        # If connections is broken, the server is gone
+                        # so we need to remove it from services
+                        del self.services[service]
+                    else:
+                        conn.sendall(b'-Service already exists\r\n')
+                        continue
 
                 # TODO we should detach the fd from connection
                 # can it be that conn variable will be collected
