@@ -24,8 +24,8 @@ class Inbound(object):
     def stop(self):
         self.stop_event.set()
 
-    async def recv(self):
-        return await self.inbox.get()
+    async def recv(self, timeout=None):
+        return await asyncio.wait_for(self.inbox.get(), timeout)
 
     async def accept_loop(self):
         while not self.stop_event.is_set():
