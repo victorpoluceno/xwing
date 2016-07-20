@@ -37,8 +37,8 @@ class Mailbox(object):
     def pid(self):
         return self.hub_frontend, self.identity
 
-    async def recv(self):
-        payload = await self.inbound.recv()
+    async def recv(self, timeout=None):
+        payload = await self.inbound.recv(timeout=timeout)
         return pickle.loads(payload)
 
     async def send(self, name_or_pid, *args):
@@ -68,36 +68,22 @@ class Node(object):
         return mailbox.pid
 
     def run(self):
-        try:
-            done, pending = self.loop.run_until_complete(asyncio.wait(
-                self.tasks, return_when=asyncio.FIRST_EXCEPTION))
+        done, pending = self.loop.run_until_complete(asyncio.wait(
+            self.tasks, return_when=asyncio.FIRST_EXCEPTION))
 
-            # If a exception happened on any of waited tasks
-            # this forces the exception to buble up
-            for future in done:
-                future.result()
-        except KeyboardInterrupt:
-            self.stop()
-
-    def run_until_complete(self):
-        self.run()
-        self.stop()
+        # If a exception happened on any of waited tasks
+        # this forces the exception to buble up
+        for future in done:
+            future.result()
 
     def stop(self):
         '''Loop stop.'''
-        for mailbox in self.mailbox_list:
-            mailbox.stop()
+        for task in asyncio.Task.all_tasks():
+            task.cancel()
 
-        pending = asyncio.Task.all_tasks()
-        self.loop.run_until_complete(asyncio.wait(pending))
+        self.loop.run_forever()
         self.loop.close()
 
+
 node = Node()
-
-
-def spawn(f, *args, name=None):
-    return node.spawn(f, *args, name=name)
-
-
-def run():
-    node.run_until_complete()
+spawn, run, stop = node.spawn, node.run, node.stop
