@@ -1,15 +1,14 @@
 import sys
-sys.path.append('.')
-
 import asyncio
 import logging
-logging.basicConfig(level='DEBUG')
 
 import uvloop
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 from xwing.socket.server import Server
 
+logging.basicConfig(level='INFO')
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+sys.path.append('.')
 
 async def handle_client(loop, conn):
     while True:
@@ -17,7 +16,7 @@ async def handle_client(loop, conn):
         if not data:
             break
 
-        await conn.send(data)    
+        await conn.send(data)
 
     conn.close()
 
