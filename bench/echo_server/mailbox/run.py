@@ -1,11 +1,8 @@
 import time
 from concurrent import futures
 
-# import asyncio
-# import uvloop
-# asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-from xwing.mailbox import Node
+from xwing.mailbox import initialize, spawn, run, get_node_instance
+initialize()
 
 
 async def send(mailbox, start, duration, payload, target_pid):
@@ -19,33 +16,33 @@ async def send(mailbox, start, duration, payload, target_pid):
 
 
 def run_bench(start, duration, data=b'x'):
-    node = Node(new_loop=True)
-    node.spawn(send, start, duration, b'x', 'server')
-    node.run()
+    initialize()  # initialize a new node with a new event loop
+    spawn(send, start, duration, b'x', 'server')
+    run()
+
+
+async def collector(mailbox, wait_for):
+    total = 0
+    for i in range(wait_for):
+        r = await mailbox.recv()
+        total += r[0]
+
+    print('Requests per second w=%d' % wait_for, total)
+
+
+async def dispatch(loop, executor, start, duration):
+    await loop.run_in_executor(executor, run_bench, start, duration)
 
 
 def main(number_of_workers=4, duration=30):
     start = time.monotonic()
-
-    async def collector(mailbox, wait_for):
-        total = 0
-        for i in range(wait_for):
-            r = await mailbox.recv()
-            total += r[0]
-
-        print('Requests per second w=%d' % wait_for, total)
-
-    async def dispatch(loop, executor):
-        await loop.run_in_executor(executor, run_bench, start, duration)
-
-    node = Node()
-    node.spawn(collector, number_of_workers, name='collector')
-
+    spawn(collector, number_of_workers, name='collector')
     executor = futures.ProcessPoolExecutor(max_workers=number_of_workers)
     for i in range(number_of_workers):
-        node.loop.create_task(dispatch(node.loop, executor))
+        node = get_node_instance()
+        node.loop.create_task(dispatch(node.loop, executor, start, duration))
 
-    node.run()
+    run()
 
 
 if __name__ == '__main__':

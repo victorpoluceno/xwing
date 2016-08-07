@@ -1,7 +1,8 @@
 import sys
 sys.path.append('.')  # NOQA
 
-from xwing.mailbox import spawn, run
+from xwing.mailbox import initialize, spawn, run
+initialize()
 
 
 async def pong(mailbox):
