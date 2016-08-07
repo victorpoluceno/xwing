@@ -1,5 +1,3 @@
-import sys
-sys.path.append('.')
 import asyncio
 
 from xwing.socket.client import Client

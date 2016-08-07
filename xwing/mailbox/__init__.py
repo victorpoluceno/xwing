@@ -47,43 +47,68 @@ class Mailbox(object):
         await self.outbound.send(pid, payload)
 
 
+node_ref = None
+
+
+def initialize():
+    global node_ref
+    node_ref = Node()
+
+
+def get_node_instance():
+    global node_ref
+    return node_ref
+
+
 class Node(object):
 
     def __init__(self, loop=None, hub_frontend='127.0.0.1',
                  hub_backend='/var/tmp/xwing.socket'):
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
         self.hub_frontend = hub_frontend
         self.hub_backend = hub_backend
         self.mailbox_list = []
         self.tasks = []
 
-    def spawn(self, fn, *args, name=None):
+    @staticmethod
+    def spawn(fn, *args, name=None, node=None):
+        if not node:
+            node = get_node_instance()
+
         # Create a mailbox for my upper_actor and schedule it to run
-        mailbox = Mailbox(self.hub_frontend, self.hub_backend,
-                          self.loop, name)
+        mailbox = Mailbox(node.hub_frontend, node.hub_backend,
+                          node.loop, name)
         mailbox.start()
 
-        self.tasks.append(self.loop.create_task(fn(mailbox, *args)))
-        self.mailbox_list.append(mailbox)
+        node.tasks.append(node.loop.create_task(fn(mailbox, *args)))
+        node.mailbox_list.append(mailbox)
         return mailbox.pid
 
-    def run(self):
-        done, pending = self.loop.run_until_complete(asyncio.wait(
-            self.tasks, return_when=asyncio.FIRST_EXCEPTION))
+    @staticmethod
+    def run(node=None):
+        if not node:
+            node = get_node_instance()
+
+        done, pending = node.loop.run_until_complete(asyncio.wait(
+            node.tasks, return_when=asyncio.FIRST_EXCEPTION))
 
         # If a exception happened on any of waited tasks
         # this forces the exception to buble up
         for future in done:
             future.result()
 
-    def stop(self):
+    @staticmethod
+    def stop(node=None):
         '''Loop stop.'''
+        if not node:
+            node = get_node_instance()
+
         for task in asyncio.Task.all_tasks():
             task.cancel()
 
-        self.loop.run_forever()
-        self.loop.close()
+        node.loop.run_forever()
+        node.loop.close()
 
 
-node = Node()
-spawn, run, stop = node.spawn, node.run, node.stop
+spawn, run, stop = Node.spawn, Node.run, Node.stop

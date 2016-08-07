@@ -11,14 +11,12 @@ class Inbound(object):
         self.loop = loop
         self.identity = identity
         self.server = Server(loop, hub_backend, identity)
-        self.connections = []  # TODO add pool with max size
         self.inbox = asyncio.Queue(loop=self.loop)
         self.stop_event = asyncio.Event()
 
     async def start(self):
         await self.server.listen()
         self.loop.create_task(self.accept_loop())
-        self.loop.create_task(self.recv_loop())
         log.info('%s is listening.' % self.identity)
 
     def stop(self):
@@ -27,27 +25,25 @@ class Inbound(object):
     async def recv(self, timeout=None):
         return await asyncio.wait_for(self.inbox.get(), timeout)
 
-    async def accept_loop(self):
+    async def accept_loop(self, timeout=5.0):
         while not self.stop_event.is_set():
-            await asyncio.sleep(0.001)
             try:
                 conn = await asyncio.wait_for(
-                    self.server.accept(), 1.0)
+                    self.server.accept(), timeout)
             except asyncio.TimeoutError:
                 continue
 
-            self.connections.append(conn)
+            # TODO may be we need some kind of limiting here
+            self.loop.create_task(self.recv_loop(conn, timeout / 5))
 
-    async def recv_loop(self):
+    async def recv_loop(self, conn, timeout):
         while not self.stop_event.is_set():
-            await asyncio.sleep(0.001)
-            for conn in self.connections:
-                try:
-                    data = await asyncio.wait_for(
-                        conn.recv(), 5.0)
-                    if not data:
-                        continue
-                except asyncio.TimeoutError:
-                    continue
+            try:
+                data = await asyncio.wait_for(
+                    conn.recv(), timeout)
+                if not data:  # connection is closed
+                    break
+            except asyncio.TimeoutError:
+                continue
 
-                await self.inbox.put(data)
+            await self.inbox.put(data)

@@ -1,7 +1,5 @@
-import sys
-sys.path.append('.')  # NOQA
-
-from xwing.mailbox import spawn, run, stop
+from xwing.mailbox import initialize, spawn, run, stop
+initialize()
 
 
 class Server(object):
@@ -30,7 +28,7 @@ class Client(object):
         async def dispatch(mailbox, function):
             await mailbox.send(self.server_pid, function, mailbox.pid)
             result = await mailbox.recv()
-            print(result)
+            print('Got result: ', result)
 
         spawn(dispatch, function)
 

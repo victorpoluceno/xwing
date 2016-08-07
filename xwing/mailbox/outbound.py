@@ -28,11 +28,12 @@ class Outbound(object):
         return self.connections[identity]
 
     async def create_connection(self, client, identity):
+        log.info('Creating connection to %s' % identity)
         while True:
             try:
                 conn = await client.connect(identity)
             except ConnectionError:
-                log.info('Retrying connection..')
+                log.info('Retrying connection to %s...' % identity)
                 await asyncio.sleep(0.1)
                 continue
             else:
@@ -41,6 +42,7 @@ class Outbound(object):
         return conn
 
     def create_client(self, hub_frontend):
+        log.info('Creating client to %s' % hub_frontend)
         address = hub_frontend
         if ':' not in hub_frontend:
             address = '%s:%d' % (hub_frontend, DEFAULT_FRONTEND_PORT)
