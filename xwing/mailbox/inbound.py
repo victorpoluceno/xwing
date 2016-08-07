@@ -43,8 +43,7 @@ class Inbound(object):
                     conn.recv(), timeout)
                 if not data:  # connection is closed
                     break
-            except asyncio.TimeoutError as e:
-                log.exception(e)
+            except asyncio.TimeoutError:
                 continue
 
             await self.inbox.put(data)

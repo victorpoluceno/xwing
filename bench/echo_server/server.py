@@ -1,14 +1,10 @@
-import sys
 import asyncio
 import logging
-
-import uvloop
 
 from xwing.socket.server import Server
 
 logging.basicConfig(level='INFO')
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-sys.path.append('.')
+
 
 async def handle_client(loop, conn):
     while True:

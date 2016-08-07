@@ -1,8 +1,11 @@
 import time
+import logging
 from concurrent import futures
 
 from xwing.mailbox import initialize, spawn, run, get_node_instance
 initialize()
+
+logging.basicConfig(level='INFO')
 
 
 async def send(mailbox, start, duration, payload, target_pid):

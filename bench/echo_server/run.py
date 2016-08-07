@@ -1,9 +1,11 @@
 import time
-import socket
 import asyncio
+import logging
 from concurrent import futures
 
 from xwing.socket.client import Client
+
+logging.basicConfig(level='INFO')
 
 
 async def connect_and_send(loop, endpoint, payload, start, duration):

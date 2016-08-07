@@ -1,5 +1,4 @@
 import sys
-sys.path.append('.')
 import asyncio
 
 from xwing.socket.server import Server

@@ -1,6 +1,3 @@
-import sys
-sys.path.append('.')  # NOQA
-
 from xwing.mailbox import initialize, spawn, run
 initialize()
 
