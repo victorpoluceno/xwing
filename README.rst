@@ -1,72 +1,63 @@
 xwing
 =====
 
-Python 3 implementation of a TCP port service multiplexer.
+Python based *asyncio* Actor Framework.
 
-Xwing is a Python library that helps to distribute connections arriving at single ip/port to many services.
+**xwing** is a full featured actor framework inspired by Erlang's design. 
 
 Features
 --------
 
-Xwing features:
+* Simple. Ships with a minimal for humans actor API.
+* Fast. Message multiplexing implemented by routing connections, not data.
+* Powerful. Based and inspired by the battle tested Erlang's actor design.
+* High level. Allow developers to write applications without worrying too much about low level details.
+* Interoperable. Can live along side other async libraries or applications.
+* Rich. Packed with features that are essential to write distributed applications.
 
-  * Fast. Socket connections are routed, not data.
-  * Standartized. Follows the TCP port service multiplexer protocol, RFC 1078.
-  * Simple. Minimal for humans API.
-  * Portable. API componentes designed to be easily embeded.
-  * Powerfull. Universal socket like API, support for sync/async style.
-  * Extensible...
-  * Interoperable...
+Sample
+------
 
-Arquitecture
-------------
+.. code-block:: python
 
-Xwing works by exposing a TCP frontend where a client connects and tells what service it wants to comunnicate with. On the backend a server, connects using a UNIX Socket and tell what services it responds for.
+    from xwing.mailbox import initialize, spawn, run
+    initialize()
+
+    async def pong(mailbox):
+        message, pid = await mailbox.recv()
+        await mailbox.send(pid, 'pong')
+
+    async def ping(mailbox, pong_pid):
+        await mailbox.send(pong_pid, 'ping', mailbox.pid)
+        print(await mailbox.recv())
+
+    pong_pid = spawn(pong)
+    spawn(ping, pong_pid)
+    run()
+
+Status
+------
+
+Not released, under heavy development. **Unstable API**.
 
 Requirements
 ------------
 
-Xwing requires Python 3.4+.
+Xwing requires Python 3.5+.
 
-Usage
------
+Roadmap
+-------
 
-Installation
-~~~~~~~~~~~~
+Features planned to *0.1* release:
 
-  pip install xwing
-
-Running the Proxy
-~~~~~~~~~~~~~~~~~
-
-Xwing ships a standalone proxy daemon ready to be used. Proxy will start listening on port 5555 for client connections. Here is how to run the proxy daemon::
-
-  xwing
-
-Server implementation
-~~~~~~~~~~~~~~~~~~~~~
-
-The serve connects to proxy as a server and start waiting to answer clients. Here is a server implementation::
-
-  from xwing.socket.server import Server
-
-  server = Server("/var/tmp/xwing.socket", "server0")
-  server.listen()
-  conn = server.accept()
-  ping = conn.recv()
-  conn.send("pong")
-
-Client implementation
-~~~~~~~~~~~~~~~~~~~~~
-
-Client connects to proxy daemon and send a data. Here is the Client implementation::
-
-  from xwing.socket.client import Client
-
-  client = Client("localhost:5555")
-  conn = client.connect("server")
-  conn.send("ping")
-  print(conn.recv())
+* Task Scheduler with SMP support.
+* Support for spawn of remote actors.
+* Cookie based authentication support.
+* Auto start of Xwing Hub on Node start.
+* Hub not required for non distributed Node.
+* Short cut communication for non distributed Node.
+* Heartbeat for connection check and keepalive.
+* Full tested and benchmarked uvloop support.
 
 Development
 ----------
