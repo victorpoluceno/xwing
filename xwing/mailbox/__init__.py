@@ -86,29 +86,41 @@ class Node(object):
         return mailbox.pid
 
     @staticmethod
-    def run(node=None):
+    def start(node=None):
+        '''Start node loop, by running all actors.'''
         if not node:
             node = get_node_instance()
 
-        done, pending = node.loop.run_until_complete(asyncio.wait(
-            node.tasks, return_when=asyncio.FIRST_EXCEPTION))
+        try:
+            done, pending = node.loop.run_until_complete(asyncio.wait(
+                node.tasks, return_when=asyncio.FIRST_EXCEPTION))
 
-        # If a exception happened on any of waited tasks
-        # this forces the exception to buble up
-        for future in done:
-            future.result()
+            # If a exception happened on any of waited tasks
+            # this forces the exception to buble up
+            for future in done:
+                future.result()
+        finally:
+            stop()
 
     @staticmethod
     def stop(node=None):
-        '''Loop stop.'''
+        '''Graceful node stop.
+
+        Cancel all running actors and wait for them to finish before
+        stopping.'''
         if not node:
             node = get_node_instance()
 
         for task in asyncio.Task.all_tasks():
             task.cancel()
 
-        node.loop.run_forever()
-        node.loop.close()
+        try:
+            pending = asyncio.Task.all_tasks()
+            node.loop.run_until_complete(asyncio.wait(pending))
+        except RuntimeError:
+            # Ignore RuntimeErrors like loop is already closed.
+            # It may happens in KeyboardInterrupt exception for
+            # example, as asyncio already killed the event loop.
+            pass
 
-
-spawn, run, stop = Node.spawn, Node.run, Node.stop
+spawn, start, stop = Node.spawn, Node.start, Node.stop

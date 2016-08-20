@@ -1,4 +1,4 @@
-from xwing.mailbox import initialize, spawn, run
+from xwing.mailbox import initialize, spawn, start
 initialize()
 
 
@@ -17,4 +17,4 @@ async def pong(mailbox):
 if __name__ == '__main__':
     # python examples/mailbox/distributed/pong.py
     spawn(pong, name='pong')
-    run()
+    start()

@@ -58,8 +58,10 @@ class Hub:
     def stop(self):
         '''Loop stop.'''
         self.stop_event.set()
-        pending = asyncio.Task.all_tasks()
-        self.loop.run_until_complete(asyncio.gather(*pending))
+        for task in asyncio.Task.all_tasks():
+            task.cancel()
+
+        self.loop.run_forever()
         self.loop.close()
 
     async def run_frontend(self, tcp_address, backlog=10, timeout=0.1):
