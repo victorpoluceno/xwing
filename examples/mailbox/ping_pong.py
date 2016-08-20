@@ -1,4 +1,4 @@
-from xwing.mailbox import initialize, spawn, run
+from xwing.mailbox import initialize, spawn, start
 initialize()
 
 
@@ -28,4 +28,4 @@ if __name__ == '__main__':
     # python examples/mailbox/ping_pong.py
     spawn(pong, name='pong')
     spawn(ping, 3)
-    run()
+    start()

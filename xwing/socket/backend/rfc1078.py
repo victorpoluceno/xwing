@@ -78,4 +78,7 @@ async def send(loop, sock, data):
 
 
 async def recv(loop, sock):
+    # TODO need to implement a recv all data until a terminator string
+    # is received, this way we avoid breaking pickle serialization.
+    # Need to research what teminator to use, '\n'?
     return await loop.sock_recv(sock, BUFFER_SIZE)

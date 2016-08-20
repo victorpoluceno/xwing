@@ -1,4 +1,4 @@
-from xwing.mailbox import initialize, spawn, run, stop
+from xwing.mailbox import initialize, spawn, start
 initialize()
 
 
@@ -41,8 +41,4 @@ if __name__ == '__main__':
     client = Client('rpc_server@127.0.0.1')
     client.call('hello_world')
 
-    try:
-        run()
-    except KeyboardInterrupt:
-        print('Stopping...')
-        stop()
+    start()
