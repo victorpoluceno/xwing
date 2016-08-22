@@ -1,6 +1,6 @@
 import logging
 
-from xwing.mailbox import initialize, spawn, run
+from xwing.mailbox import initialize, spawn, start
 initialize()
 
 logging.basicConfig(level='INFO')
@@ -18,4 +18,4 @@ async def run_server(mailbox):
 
 if __name__ == '__main__':
     spawn(run_server, name='server')
-    run()
+    start()
