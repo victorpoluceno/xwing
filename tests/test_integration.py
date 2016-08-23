@@ -7,9 +7,8 @@ import subprocess
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
+from xwing.mailbox import initialize, spawn, start
 from xwing.socket.client import Client
-from xwing.mailbox import initialize, run, spawn
-
 
 FRONTEND_ADDRESS = '127.0.0.1:5555'
 
@@ -85,4 +84,4 @@ class TestMailbox(object):
 
         pid = spawn(echo_server)
         spawn(echo_client, pid)
-        run()
+        start()

@@ -20,7 +20,7 @@ Sample
 
 .. code-block:: python
 
-    from xwing.mailbox import initialize, spawn, run
+    from xwing.mailbox import initialize, spawn, start
     initialize()
 
     async def pong(mailbox):
@@ -33,7 +33,7 @@ Sample
 
     pong_pid = spawn(pong)
     spawn(ping, pong_pid)
-    run()
+    start()
 
 Status
 ------
