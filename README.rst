@@ -1,6 +1,9 @@
 xwing
 =====
 
+.. image:: https://travis-ci.org/victorpoluceno/xwing.svg?branch=development
+    :target: https://travis-ci.org/victorpoluceno/xwing
+
 Python based *asyncio* Actor Framework.
 
 **xwing** is a full featured actor framework inspired by Erlang's design. 
