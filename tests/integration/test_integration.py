@@ -16,7 +16,8 @@ FRONTEND_ADDRESS = '127.0.0.1:5555'
 def setup_module(module):
     module.hub_process = subprocess.Popen('bin/xwing')
     time.sleep(1)
-    module.server_process = subprocess.Popen(['python', 'tests/run_server.py'])
+    module.server_process = subprocess.Popen(
+        ['python', 'tests/integration/run_server.py'])
 
 
 def teardown_module(module):
