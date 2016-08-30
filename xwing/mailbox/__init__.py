@@ -71,56 +71,54 @@ class Node(object):
         self.mailbox_list = []
         self.tasks = []
 
-    @staticmethod
-    def spawn(fn, *args, name=None, node=None):
-        if not node:
-            node = get_node_instance()
 
-        # Create a mailbox for my upper_actor and schedule it to run
-        mailbox = Mailbox(node.hub_frontend, node.hub_backend,
-                          node.loop, name)
-        mailbox.start()
+def spawn_node(fn, *args, name=None, node=None):
+    if not node:
+        node = get_node_instance()
 
-        node.tasks.append(node.loop.create_task(fn(mailbox, *args)))
-        node.mailbox_list.append(mailbox)
-        return mailbox.pid
+    # Create a mailbox for my upper_actor and schedule it to run
+    mailbox = Mailbox(node.hub_frontend, node.hub_backend,
+                      node.loop, name)
+    mailbox.start()
 
-    @staticmethod
-    def start(node=None):
-        '''Start node loop, by running all actors.'''
-        if not node:
-            node = get_node_instance()
+    node.tasks.append(node.loop.create_task(fn(mailbox, *args)))
+    node.mailbox_list.append(mailbox)
+    return mailbox.pid
 
-        try:
-            done, pending = node.loop.run_until_complete(asyncio.wait(
-                node.tasks, return_when=asyncio.FIRST_EXCEPTION))
 
-            # If a exception happened on any of waited tasks
-            # this forces the exception to buble up
-            for future in done:
-                future.result()
-        finally:
-            stop()
+def start_node(node=None):
+    '''Start node loop, by running all actors.'''
+    if not node:
+        node = get_node_instance()
 
-    @staticmethod
-    def stop(node=None):
-        '''Graceful node stop.
+    try:
+        done, pending = node.loop.run_until_complete(asyncio.wait(
+            node.tasks, return_when=asyncio.FIRST_EXCEPTION))
 
-        Cancel all running actors and wait for them to finish before
-        stopping.'''
-        if not node:
-            node = get_node_instance()
+        # If a exception happened on any of waited tasks
+        # this forces the exception to buble up
+        for future in done:
+            future.result()
+    finally:
+        stop_node()
 
-        for task in asyncio.Task.all_tasks():
-            task.cancel()
 
-        try:
-            pending = asyncio.Task.all_tasks()
-            node.loop.run_until_complete(asyncio.wait(pending))
-        except RuntimeError:
-            # Ignore RuntimeErrors like loop is already closed.
-            # It may happens in KeyboardInterrupt exception for
-            # example, as asyncio already killed the event loop.
-            pass
+def stop_node(node=None):
+    '''Graceful node stop.
 
-spawn, start, stop = Node.spawn, Node.start, Node.stop
+    Cancel all running actors and wait for them to finish before
+    stopping.'''
+    if not node:
+        node = get_node_instance()
+
+    for task in asyncio.Task.all_tasks():
+        task.cancel()
+
+    try:
+        pending = asyncio.Task.all_tasks()
+        node.loop.run_until_complete(asyncio.wait(pending))
+    except RuntimeError:
+        # Ignore RuntimeErrors like loop is already closed.
+        # It may happens in KeyboardInterrupt exception for
+        # example, as asyncio already killed the event loop.
+        pass
