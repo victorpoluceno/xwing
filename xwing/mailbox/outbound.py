@@ -5,6 +5,7 @@ log = logging.getLogger(__name__)
 from xwing.socket.client import Client
 
 DEFAULT_FRONTEND_PORT = 5555
+SEPARATOR = b'\n'
 
 
 class Outbound(object):
@@ -51,4 +52,4 @@ class Outbound(object):
 
     async def send(self, pid, data):
         conn = await self.connect(pid)
-        await conn.send(data)
+        await conn.send(data + SEPARATOR)
