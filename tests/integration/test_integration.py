@@ -7,7 +7,7 @@ import subprocess
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-from xwing.mailbox import initialize, spawn_node, start_node
+from xwing.mailbox import init_node, start_node, spawn
 from xwing.socket.client import Client
 
 FRONTEND_ADDRESS = '127.0.0.1:5555'
@@ -72,7 +72,7 @@ class TestSocket:
 class TestMailbox(object):
 
     def setup_class(self):
-        initialize()
+        init_node()
 
     def test_send_and_recv(self):
         async def echo_server(mailbox):
@@ -83,6 +83,6 @@ class TestMailbox(object):
             await mailbox.send(pid_server, 'hello', mailbox.pid)
             await mailbox.recv()
 
-        pid = spawn_node(echo_server)
-        spawn_node(echo_client, pid)
+        pid = spawn(echo_server)
+        spawn(echo_client, pid)
         start_node()

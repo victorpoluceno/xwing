@@ -47,19 +47,6 @@ class Mailbox(object):
         await self.outbound.send(pid, payload)
 
 
-node_ref = None
-
-
-def initialize():
-    global node_ref
-    node_ref = Node()
-
-
-def get_node_instance():
-    global node_ref
-    return node_ref
-
-
 class Node(object):
 
     def __init__(self, loop=None, hub_frontend='127.0.0.1',
@@ -72,7 +59,20 @@ class Node(object):
         self.tasks = []
 
 
-def spawn_node(fn, *args, name=None, node=None):
+node_ref = None
+
+
+def get_node_instance():
+    global node_ref
+    return node_ref
+
+
+def init_node():
+    global node_ref
+    node_ref = Node()
+
+
+def spawn(fn, *args, name=None, node=None):
     if not node:
         node = get_node_instance()
 

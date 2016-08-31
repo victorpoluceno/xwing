@@ -25,8 +25,7 @@ Sample
 
 .. code-block:: python
 
-    from xwing.mailbox import initialize, spawn_node, start_node
-    initialize()
+    from xwing.mailbox import init_node, start_node, spawn
 
     async def pong(mailbox):
         message, pid = await mailbox.recv()
@@ -36,8 +35,9 @@ Sample
         await mailbox.send(pong_pid, 'ping', mailbox.pid)
         print(await mailbox.recv())
 
-    pong_pid = spawn_node(pong)
-    spawn_node(ping, pong_pid)
+    init_node()
+    pong_pid = spawn(pong)
+    spawn(ping, pong_pid)
     start_node()
 
 Status
