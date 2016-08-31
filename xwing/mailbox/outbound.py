@@ -8,6 +8,10 @@ DEFAULT_FRONTEND_PORT = 5555
 SEPARATOR = b'\n'
 
 
+class MaxRetriesExceededError(Exception):
+    pass
+
+
 class Outbound(object):
 
     def __init__(self, loop, identity):
@@ -16,29 +20,39 @@ class Outbound(object):
         self.clients = {}
         self.connections = {}
 
-    async def connect(self, pid):
+    async def send(self, pid, data):
+        conn = await self.connect(pid)
+        return await conn.send(data + SEPARATOR)
+
+    async def connect(self, pid, max_retries=30, retry_sleep=0.1):
         hub_frontend, identity = pid
         if identity not in self.connections:
             if hub_frontend not in self.clients:
                 self.clients[hub_frontend] = self.create_client(hub_frontend)
 
             client = self.clients[hub_frontend]
-            self.connections[identity] = await self.create_connection(
-                client, identity)
+            self.connections[identity] = await self.connect_client(
+                client, identity, max_retries, retry_sleep)
 
         return self.connections[identity]
 
-    async def create_connection(self, client, identity):
+    async def connect_client(self, client, identity, max_retries, retry_sleep):
         log.info('Creating connection to %s' % identity)
-        while True:
+        conn = None
+        number_of_retries = 0
+        while number_of_retries < max_retries:
             try:
                 conn = await client.connect(identity)
             except ConnectionError:
                 log.info('Retrying connection to %s...' % identity)
-                await asyncio.sleep(0.1)
+                number_of_retries += 1
+                await asyncio.sleep(retry_sleep)
                 continue
             else:
                 break
+
+        if not conn:
+            raise MaxRetriesExceededError
 
         return conn
 
@@ -50,6 +64,3 @@ class Outbound(object):
 
         return Client(self.loop, address, self.identity)
 
-    async def send(self, pid, data):
-        conn = await self.connect(pid)
-        await conn.send(data + SEPARATOR)
