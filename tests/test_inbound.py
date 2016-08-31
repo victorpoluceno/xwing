@@ -104,13 +104,27 @@ class TestInbound:
         assert not self.inbound.inbox.put.called
 
     def test_recv_one(self):
-        self.conn.recv.coro.return_value = 'foo'
+        reader = make_coro_mock()
+        reader.readline = make_coro_mock()
+        reader.readline.coro.return_value = b'foo\n'
         data = self.loop.run_until_complete(self.inbound.recv_one(
-                                            self.conn, 1.0))
-        assert data == 'foo'
+                                            reader, 1.0))
+        assert data == b'foo'
 
-    def test_recv_one_catch_timeout_error(self):
-        self.conn.recv.coro.side_effect = asyncio.TimeoutError
+    def test_recv_one_partil_data(self):
+        reader = make_coro_mock()
+        reader.readline = make_coro_mock()
+        reader.readline.coro.return_value = b'foo'
         data = self.loop.run_until_complete(self.inbound.recv_one(
-                                            self.conn, 1.0))
+                                            reader, 1.0))
+        assert data is None
+
+    @mock.patch('xwing.mailbox.inbound.connection_to_stream',
+                new_callable=make_coro_mock)
+    def test_recv_one_catch_timeout_error(self, connection_to_stream):
+        reader = make_coro_mock()
+        reader.readline = make_coro_mock()
+        reader.readline.side_effect = asyncio.TimeoutError
+        data = self.loop.run_until_complete(self.inbound.recv_one(
+                                            reader, 1.0))
         assert data is None

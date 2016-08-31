@@ -3,6 +3,12 @@ import logging
 log = logging.getLogger(__name__)
 
 from xwing.socket.server import Server
+from xwing.mailbox.outbound import SEPARATOR
+
+
+async def connection_to_stream(connection, loop):
+    return await asyncio.open_connection(sock=connection.sock,
+                                         loop=loop)
 
 
 class Inbound(object):
@@ -46,20 +52,25 @@ class Inbound(object):
         return conn
 
     async def run_recv_loop(self, conn, timeout):
+        reader, _ = await connection_to_stream(conn, self.loop)
         while not self.stop_event.is_set():
-            data = await self.recv_one(conn, timeout)
+            data = await self.recv_one(reader, timeout)
             if not data:  # connection is closed
                 break
 
             await self.inbox.put(data)
 
-    async def recv_one(self, conn, timeout):
-        # TODO need to implement a recv all data until a terminator string
-        # is received, this way we avoid breaking pickle serialization.
-        # Need to research what teminator to use, '\n'?
+    async def recv_one(self, reader, timeout):
         try:
-            data = await asyncio.wait_for(conn.recv(), timeout)
+            data = await asyncio.wait_for(reader.readline(), timeout)
         except asyncio.TimeoutError:
             return None
 
-        return data
+        if data and not data.endswith(SEPARATOR):
+            log.warning('Received a partial message. '
+                        'This may indicate a broken pipe.')
+            # TODO may be we need to raise an exception here
+            # and only return None when connection s really closed?
+            return None
+
+        return data[:-1]
