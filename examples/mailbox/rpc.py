@@ -1,5 +1,4 @@
-from xwing.mailbox import initialize, spawn, start
-initialize()
+from xwing.mailbox import init_node, start_node, spawn
 
 
 class Server(object):
@@ -35,10 +34,12 @@ class Client(object):
 
 if __name__ == '__main__':
     # python examples/mailbox/rpc.py
+    init_node()
+
     server = Server()
     server.run()
 
     client = Client('rpc_server@127.0.0.1')
     client.call('hello_world')
 
-    start()
+    start_node()

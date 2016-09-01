@@ -1,5 +1,4 @@
-from xwing.mailbox import initialize, spawn, start
-initialize()
+from xwing.mailbox import init_node, start_node, spawn
 
 
 async def ping(mailbox, n, pong_node):
@@ -14,5 +13,6 @@ async def ping(mailbox, n, pong_node):
 
 if __name__ == '__main__':
     # python examples/mailbox/distributed/ping.py
+    init_node()
     spawn(ping, 3, 'pong@127.0.0.1')
-    start()
+    start_node()
