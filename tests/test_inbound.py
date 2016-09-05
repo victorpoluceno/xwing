@@ -104,10 +104,10 @@ class TestInbound:
 
     @mock.patch('xwing.mailbox.inbound.connection_to_stream',
                 new_callable=make_coro_mock)
-    def test_recv_one_catch_timeout_error(self, connection_to_stream):
+    def test_recv_one_raise_timeout_error(self, connection_to_stream):
         reader = make_coro_mock()
         reader.readline = make_coro_mock()
         reader.readline.side_effect = asyncio.TimeoutError
-        data = self.loop.run_until_complete(self.inbound.recv_one(
-                                            reader, 1.0))
-        assert data is None
+        with pytest.raises(asyncio.TimeoutError):
+            self.loop.run_until_complete(self.inbound.recv_one(
+                                         reader, 1.0))

@@ -131,6 +131,7 @@ class Hub:
                 if not service:  # connection was closed
                     break
 
+                log.debug('Got new service: {0}'.format(service))
                 server_conn = self.services.get(service)
                 if server_conn:
                     try:

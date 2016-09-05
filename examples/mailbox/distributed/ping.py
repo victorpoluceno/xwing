@@ -14,5 +14,5 @@ async def ping(mailbox, n, pong_node):
 if __name__ == '__main__':
     # python examples/mailbox/distributed/ping.py
     init_node()
-    spawn(ping, 3, 'pong@127.0.0.1')
+    spawn(ping, 30000, 'pong@127.0.0.1')
     start_node()

@@ -1,14 +1,29 @@
 import asyncio
 import logging
+import time
 log = logging.getLogger(__name__)
 
 from xwing.socket.server import Server
 from xwing.mailbox.outbound import SEPARATOR
 
 
+INITIAL_HEARBEAT_LIVENESS = 3
+HEARTBEAT_SIGNAL = b'HEARTBEAT'
+
+
 async def connection_to_stream(connection, loop):
     return await asyncio.open_connection(sock=connection.sock,
                                          loop=loop)
+
+
+class HeartbeatFailure(Exception):
+    pass
+
+
+# TODO to avoiding having dead connections forever
+# we want to catch hearbeat exceptions and close
+# the connection or even expiry connections if don't
+# receve data for heartbeat_interval * hertbeat liveness
 
 
 class Inbound(object):
@@ -51,19 +66,44 @@ class Inbound(object):
 
         return conn
 
-    async def run_recv_loop(self, conn, timeout):
-        reader, _ = await connection_to_stream(conn, self.loop)
+    # TODO the recv data must not be implemented here.
+    # Inbound only knowns how accept and create a connection
+    async def run_recv_loop(self, conn, timeout, heartbeat_interval=5):
+        assert timeout < heartbeat_interval
+
+        liveness = INITIAL_HEARBEAT_LIVENESS
+        start_time = time.time()
+
+        reader, writer = await connection_to_stream(conn, self.loop)
         while not self.stop_event.is_set():
-            data = await self.recv_one(reader, timeout)
+            if liveness <= 0:
+                raise HeartbeatFailure()
+
+            if time.time() - start_time > heartbeat_interval:
+                writer.write(HEARTBEAT_SIGNAL + b'\n')
+                start_time = time.time()
+                log.debug('Sent hearbeat signal.')
+
+            try:
+                data = await self.recv_one(reader, heartbeat_interval)
+            except asyncio.TimeoutError:
+                liveness -= 1
+                continue
+
+            # TODO raise a proper connection error here
             if not data:  # connection is closed
-                break
+                raise
+
+            liveness = INITIAL_HEARBEAT_LIVENESS
+            if data == HEARTBEAT_SIGNAL:
+                log.debug('Got heartbeat signal!')
+                continue
 
             await self.inbox.put(data)
 
     async def recv_one(self, reader, timeout):
-        try:
-            data = await asyncio.wait_for(reader.readline(), timeout)
-        except asyncio.TimeoutError:
+        data = await asyncio.wait_for(reader.readline(), timeout)
+        if not data:
             return None
 
         if data and not data.endswith(SEPARATOR):
