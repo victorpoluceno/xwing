@@ -5,7 +5,7 @@ import pytest
 
 from xwing.mailbox.outbound import (Outbound, MaxRetriesExceededError,
                                     DEFAULT_FRONTEND_PORT)
-from tests.helpers import make_coro_mock
+from tests.helpers import make_coro_mock, run_once
 
 
 class TestOutbound:
@@ -13,14 +13,55 @@ class TestOutbound:
     def setup_method(self, method):
         self.loop = asyncio.get_event_loop()
         self.outbound = Outbound(self.loop, 'myid')
+        self.outbound.stop_event.is_set = run_once(
+            self.outbound.stop_event.is_set, return_value=True)
+
+    def test_start_call_listen_accept_loop(self):
+        self.outbound.run_send_loop = make_coro_mock()
+        self.outbound.start()
+        assert self.outbound.run_send_loop.called
+
+    def test_stop(self):
+        self.outbound.stop()
+        outbox = make_coro_mock()
+        outbox.put = make_coro_mock()
+        self.outbound.outbox = outbox
+        self.loop.run_until_complete(self.outbound.run_send_loop())
+        assert not self.outbound.outbox.called
 
     def test_send(self):
-        conn = make_coro_mock()
+        outbox = make_coro_mock()
+        outbox.put = make_coro_mock()
+        self.outbound.outbox = outbox
+        assert self.loop.run_until_complete(self.outbound.send('foo', b'bar'))
+        outbox.put.assert_called_with(('foo', b'bar'))
+
+    def test_run_send_loop(self):
+        outbox = make_coro_mock()
+        outbox.get = make_coro_mock()
+        outbox.get.coro.return_value = ('foo', b'bar')
+        self.outbound.outbox = outbox
+
+        class Conn:
+            pass
+
+        conn = Conn()
         conn.send = make_coro_mock()
         self.outbound.connect = make_coro_mock()
         self.outbound.connect.coro.return_value = conn
-        assert self.loop.run_until_complete(self.outbound.send('foo', b'bar'))
+
+        self.loop.run_until_complete(self.outbound.run_send_loop())
+        assert self.outbound.connect.called
         assert conn.send.called
+
+    def test_run_send_loop_with_no_data(self):
+        outbox = make_coro_mock()
+        outbox.get = make_coro_mock()
+        outbox.get.coro.side_effect = asyncio.TimeoutError
+        self.outbound.outbox = outbox
+        self.outbound.connect = make_coro_mock()
+        self.loop.run_until_complete(self.outbound.run_send_loop())
+        assert not self.outbound.connect.called
 
     def test_connect(self):
         pid = '127.0.0.1', 'foo'

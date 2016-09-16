@@ -29,9 +29,11 @@ class Mailbox(object):
 
     def start(self):
         self.loop.create_task(self.inbound.start())
+        self.outbound.start()
 
     def stop(self):
         self.inbound.stop()
+        self.outbound.stop()
 
     @property
     def pid(self):
