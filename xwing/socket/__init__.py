@@ -27,8 +27,7 @@ class Connection:
 
         :param data: Data to send.
         '''
-        await send(self.loop, self.sock, data)
-        return True
+        return await send(self.loop, self.sock, data)
 
     async def send_str(self, data, encoding='utf-8'):
         if encoding:
