@@ -56,11 +56,7 @@ Roadmap
 Features planned to *0.1* release:
 
 * Task Scheduler with SMP support.
-* Support for spawn of remote actors.
-* Cookie based authentication support.
 * Auto start of Xwing Hub on Node start.
-* Hub not required for non distributed Node.
-* Short cut communication for non distributed Node.
 * Heartbeat for connection check and keepalive.
 * Full tested and benchmarked uvloop support.
 
