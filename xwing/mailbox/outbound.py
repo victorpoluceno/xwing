@@ -19,10 +19,33 @@ class Outbound(object):
         self.identity = identity
         self.clients = {}
         self.connections = {}
+        self.outbox = asyncio.Queue(loop=self.loop)
+        self.stop_event = asyncio.Event()
+
+    def start(self):
+        self.loop.create_task(self.run_send_loop())
+
+    def stop(self):
+        self.stop_event.set()
 
     async def send(self, pid, data):
-        conn = await self.connect(pid)
-        return await conn.send(data + SEPARATOR)
+        await self.outbox.put((pid, data))
+        return data
+
+    async def run_send_loop(self, timeout=0.1):
+        while not self.stop_event.is_set():
+            try:
+                pid, data = await asyncio.wait_for(self.outbox.get(),
+                                                   timeout=timeout)
+            except (asyncio.TimeoutError):
+                continue
+
+            try:
+                conn = await self.connect(pid)
+            except MaxRetriesExceededError:
+                continue
+
+            await conn.send(data + SEPARATOR)
 
     async def connect(self, pid, max_retries=30, retry_sleep=0.1):
         hub_frontend, identity = pid
@@ -63,4 +86,3 @@ class Outbound(object):
             address = '%s:%d' % (hub_frontend, DEFAULT_FRONTEND_PORT)
 
         return Client(self.loop, address, self.identity)
-
