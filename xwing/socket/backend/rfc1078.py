@@ -41,6 +41,13 @@ async def accept(loop, sock):
             if data[0] == SERVICE_PING:
                 continue
             _, ancdata, flags, addr = data
+            if not ancdata:
+                # Hub is gone, return None will signal that listen must run
+                # again. We also close the socket, this way any further
+                # operations on this socket will raise OSError
+                sock.close()
+                return None
+
             cmsg_level, cmsg_type, cmsg_data = ancdata[0]
         except BlockingIOError:
             await asyncio.sleep(0.1)
@@ -74,11 +81,8 @@ async def connect(loop, tcp_address, service, tcp_nodelay=True):
 
 
 async def send(loop, sock, data):
-    return await loop.sock_sendall(sock, data)
-
+    ret = await loop.sock_sendall(sock, data)
+    return True if ret is None else False
 
 async def recv(loop, sock):
-    # TODO need to implement a recv all data until a terminator string
-    # is received, this way we avoid breaking pickle serialization.
-    # Need to research what teminator to use, '\n'?
     return await loop.sock_recv(sock, BUFFER_SIZE)
