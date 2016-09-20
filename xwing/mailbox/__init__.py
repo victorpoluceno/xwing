@@ -2,6 +2,7 @@ import pickle
 import uuid
 import asyncio
 
+from xwing.mailbox.pool import Pool
 from xwing.mailbox.inbound import Inbound
 from xwing.mailbox.outbound import Outbound
 
@@ -24,8 +25,11 @@ class Mailbox(object):
         self.hub_frontend = hub_frontend
         self.loop = loop
         self.identity = name if name else str(uuid.uuid1())
-        self.inbound = Inbound(self.loop, self.hub_backend, self.identity)
-        self.outbound = Outbound(self.loop, self.identity)
+        self.pool = Pool()
+        self.inbound = Inbound(self.loop, self.hub_backend, self.identity,
+                               self.pool)
+        self.outbound = Outbound(self.loop, self.identity, self.pool,
+                                 self.inbound)
 
     def start(self):
         self.loop.create_task(self.inbound.start())
