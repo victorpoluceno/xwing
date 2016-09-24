@@ -1,4 +1,4 @@
-class Pool(object):
+class ConnectionPool(object):
 
     def __init__(self):
         self._connections = {}
@@ -13,6 +13,7 @@ class Pool(object):
     def __getitem__(self, item):
         if not isinstance(item, str):
             raise TypeError('Item must be of str type')
+
         return self._connections[item]
 
     def __contains__(self, item):
