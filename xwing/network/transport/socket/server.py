@@ -2,8 +2,8 @@ import logging
 import uuid
 import asyncio
 
-from xwing.socket import Connection
-from xwing.socket.backend.rfc1078 import accept, listen
+from xwing.network.transport.socket import Connection
+from xwing.network.transport.socket.backend.rfc1078 import accept, listen
 
 log = logging.getLogger(__name__)
 

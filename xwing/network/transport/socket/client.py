@@ -1,8 +1,8 @@
 import logging
 import uuid
 
-from xwing.socket import Connection
-from xwing.socket.backend.rfc1078 import connect
+from xwing.network.transport.socket import Connection
+from xwing.network.transport.socket.backend.rfc1078 import connect
 
 log = logging.getLogger(__name__)
 
@@ -36,4 +36,4 @@ class Client(object):
     async def connect(self, service):
         address, port = self.multiplex_endpoint.split(':')
         return Connection(self.loop, await connect(
-                self.loop, (address, int(port)), service))
+                          self.loop, (address, int(port)), service))

@@ -2,9 +2,9 @@ import pickle
 import uuid
 import asyncio
 
-from xwing.mailbox.pool import Pool
-from xwing.mailbox.inbound import Inbound
-from xwing.mailbox.outbound import Outbound
+from xwing.network.protocol import Broker
+from xwing.network.protocol.inbound import Inbound
+from xwing.network.protocol.outbound import Outbound
 
 
 def resolve(name_or_pid):
@@ -25,11 +25,13 @@ class Mailbox(object):
         self.hub_frontend = hub_frontend
         self.loop = loop
         self.identity = name if name else str(uuid.uuid1())
-        self.pool = Pool()
+
+        # TODO introduce the Controller facade
+        self.broker = Broker()
         self.inbound = Inbound(self.loop, self.hub_backend, self.identity,
-                               self.pool)
-        self.outbound = Outbound(self.loop, self.identity, self.pool,
-                                 self.inbound)
+                               self.broker)
+        self.broker.connection_estabilished(self.inbound.start_receiving)
+        self.outbound = Outbound(self.loop, self.identity, self.broker)
 
     def start(self):
         self.loop.create_task(self.inbound.start())
