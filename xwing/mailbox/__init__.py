@@ -27,7 +27,7 @@ class Mailbox(object):
         self.identity = name if name else str(uuid.uuid1())
 
         # TODO introduce the Controller facade
-        self.broker = Broker()
+        self.broker = Broker(self.loop)
         self.inbound = Inbound(self.loop, self.hub_backend, self.identity,
                                self.broker)
         self.broker.connection_estabilished(self.inbound.start_receiving)

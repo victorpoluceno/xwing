@@ -14,5 +14,5 @@ class MaxRetriesExceededError(Exception):
     pass
 
 
-class HeatbeatFailure(Exception):
+class HeartbeatFailureError(Exception):
     pass
