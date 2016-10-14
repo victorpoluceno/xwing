@@ -2,11 +2,35 @@ import asyncio
 
 import pytest
 
-from xwing.exceptions import HeartbeatFailureError
+from xwing.exceptions import HeartbeatFailureError, ConnectionAlreadyExists
 from xwing.mailbox import TaskPool
-from xwing.network.connection import Connection
+from xwing.network.connection import Connection, Repository
 from xwing.network.transport.stream import get_stream_connection
 from tests.helpers import run_until_complete
+
+
+class TestRepository:
+
+    def setup_method(self, method):
+        self.repository = Repository()
+
+    def test_add_get(self):
+        self.repository.add(1, 'foo')
+        assert self.repository.get('foo') == 1
+
+    def test_add_existing_connection_fails(self):
+        self.repository.add(1, 'foo')
+        with pytest.raises(ConnectionAlreadyExists):
+            self.repository.add(1, 'foo')
+
+    def test_contains(self):
+        self.repository.add(1, 'foo')
+        assert 'foo' in self.repository
+        assert 'bar' not in self.repository
+
+    def test_identity_must_be_string(self):
+        with pytest.raises(TypeError):
+            b'foo' in self.repository
 
 
 class TestConnection:
@@ -32,3 +56,5 @@ class TestConnection:
         self.connection.liveness = 1
         with pytest.raises(HeartbeatFailureError):
             await self.connection.run_heartbeat_loop(heartbeat_interval=0.1)
+
+

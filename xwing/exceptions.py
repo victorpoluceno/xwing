@@ -16,3 +16,7 @@ class MaxRetriesExceededError(Exception):
 
 class HeartbeatFailureError(Exception):
     pass
+
+
+class ConnectionAlreadyExists(Exception):
+    pass

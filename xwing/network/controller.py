@@ -1,11 +1,12 @@
 import asyncio
 
-from xwing.network.broker import Broker
 from xwing.network.inbound import Inbound
 from xwing.network.outbound import Outbound, Connector
 from xwing.exceptions import MaxRetriesExceededError
 from xwing.network.transport.stream.server import get_stream_server
 from xwing.network.transport.stream.client import get_stream_client
+from xwing.network.handshake import connect_handshake, accept_handshake
+from xwing.network.connection import Connection, Repository
 
 
 class Controller:
@@ -14,7 +15,7 @@ class Controller:
         self.loop = loop
         self.task_pool = task_pool
         self.settings = settings
-        self.broker = Broker(self.loop, self.task_pool)
+        self.repository = Repository()
         self.inbound = Inbound(self.loop, settings)
         self.outbound = Outbound(self.loop, settings)
         self.stop_event = asyncio.Event()
@@ -42,18 +43,21 @@ class Controller:
 
             pid, data = item
             hub_frontend, remote_identity = pid
-            if remote_identity not in self.broker:
+            if remote_identity not in self.repository:
                 try:
                     stream = await connector.connect(pid)
                 except (MaxRetriesExceededError):
                     continue
                 else:
-                    connection = await self.broker.connect(
-                        stream, self.settings.identity,
-                        remote_identity)
+                    connection = Connection(self.loop, stream, self.task_pool)
+                    await connect_handshake(
+                        connection, local_identity=self.settings.identity)
+
+                    connection.start()
+                    self.repository.add(connection, remote_identity)
                     self.start_receiver(connection)
 
-            connection = self.broker.get(remote_identity)
+            connection = self.repository.get(remote_identity)
             connection.send(data)
 
     async def run_inbound(self):
@@ -64,8 +68,12 @@ class Controller:
             if not stream:
                 continue
 
-            connection = await self.broker.accept_connection(
-                stream, self.settings.identity)
+            connection = Connection(self.loop, stream, self.task_pool)
+            remote_identity = await accept_handshake(
+                connection, local_identity=self.settings.identity)
+
+            connection.start()
+            self.repository.add(connection, remote_identity)
             self.start_receiver(connection)
 
     def start_receiver(self, connection, timeout=5.0):

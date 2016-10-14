@@ -3,7 +3,7 @@ import time
 import logging
 log = logging.getLogger(__name__)
 
-from xwing.exceptions import HeartbeatFailureError
+from xwing.exceptions import HeartbeatFailureError, ConnectionAlreadyExists
 
 EOL = b'\n'
 HEARTBEAT = b'HEARTBEAT'
@@ -11,6 +11,36 @@ HEARTBEAT_SIGNAL = b'HEARTBEAT_SIGNAL'
 HEARTBEAT_ACK = b'HEARTBEAT_ACK'
 
 INITIAL_HEARBEAT_LIVENESS = 3
+
+
+class Repository:
+
+    def __init__(self):
+        self.connections = {}
+
+    def get(self, identity):
+        return self[identity]
+
+    def add(self, connection, identity):
+        log.debug('Adding new connection to {0}'.format(identity))
+        if self.connections.get(identity):
+            raise ConnectionAlreadyExists
+
+        self.connections[identity] = connection
+
+    def __getitem__(self, item):
+        if not isinstance(item, str):
+            raise TypeError('Item must be of str type')
+
+        return self.connections[item]
+
+    def __contains__(self, item):
+        try:
+            self.__getitem__(item)
+        except KeyError:
+            return False
+
+        return True
 
 
 class Connection:
