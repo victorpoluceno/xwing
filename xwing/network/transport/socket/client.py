@@ -1,5 +1,4 @@
 import logging
-import uuid
 
 from xwing.network.transport.socket import Connection
 from xwing.network.transport.socket.backend.rfc1078 import connect
@@ -28,12 +27,12 @@ class Client(object):
       >>> conn.recv()
     '''
 
-    def __init__(self, loop, multiplex_endpoint, identity=None):
+    def __init__(self, loop, remote_hub_frontend, identity):
         self.loop = loop
-        self.multiplex_endpoint = multiplex_endpoint
-        self.identity = str(uuid.uuid1()) if not identity else identity
+        self.remote_hub_frontend = remote_hub_frontend
+        self.identity = identity
 
-    async def connect(self, service):
-        address, port = self.multiplex_endpoint.split(':')
+    async def connect(self, remote_identity):
+        address, port = self.remote_hub_frontend.split(':')
         return Connection(self.loop, await connect(
-                          self.loop, (address, int(port)), service))
+                          self.loop, (address, int(port)), remote_identity))

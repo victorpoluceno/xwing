@@ -9,3 +9,24 @@ class StreamClient(Client):
             StreamClient, self).connect(service))
         await stream_connection.initialize()
         return stream_connection
+
+
+class DummyStreamClient:
+
+    def __init__(self, loop, remote_hub_frontend, identity):
+        self.loop = loop
+        self.remote_hub_frontend = remote_hub_frontend
+        self.identity = identity
+
+    async def connect(self, service):
+        return True
+
+
+kind_map = {
+    'real': StreamClient,
+    'dummy': DummyStreamClient,
+}
+
+
+def get_stream_client(kind):
+    return kind_map[kind]

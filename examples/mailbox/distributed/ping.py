@@ -10,6 +10,8 @@ async def ping(mailbox, n, pong_node):
         if message[0] == 'pong':
             print('Ping received pong')
 
+        #await asyncio.sleep(10)
+
     await mailbox.send('pong', 'finished')
 
     # FIXME right now we need this to make sure that

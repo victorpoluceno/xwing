@@ -2,6 +2,16 @@ import asyncio
 from unittest import mock
 
 
+def run(loop, coro_or_future):
+    return loop.run_until_complete(coro_or_future)
+
+
+def run_until_complete(f):
+    def wrap(*args, **kwargs):
+        return run(asyncio.get_event_loop(), f(*args, **kwargs))
+    return wrap
+
+
 def make_coro_mock():
     coro = mock.Mock(name="CoroutineResult")
     corofunc = mock.Mock(name="CoroutineFunction",

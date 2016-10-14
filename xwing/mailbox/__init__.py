@@ -1,10 +1,11 @@
 import pickle
 import uuid
 import asyncio
+from functools import partial
 
-from xwing.network.protocol import Broker
-from xwing.network.protocol.inbound import Inbound
-from xwing.network.protocol.outbound import Outbound
+import attr
+
+from xwing.network.controller import Controller
 
 
 def resolve(name_or_pid):
@@ -18,52 +19,66 @@ def resolve(name_or_pid):
     return name_or_pid
 
 
+class TaskPool:
+
+    def __init__(self, loop):
+        self.loop = loop
+        self.callbacks = []
+
+    def create_task(self, fn):
+        fut = self.loop.create_task(fn)
+        fut.add_done_callback(self.done_callback)
+
+    def done_callback(self, fut):
+        if not fut.cancelled() and fut.exception:
+            for callback in self.callbacks:
+                callback(fut)
+
+    def add_exception_callback(self, callback):
+        self.callbacks.append(callback)
+
+
 class Mailbox(object):
 
-    def __init__(self, hub_frontend, hub_backend, loop, name):
-        self.hub_backend = hub_backend
-        self.hub_frontend = hub_frontend
+    def __init__(self, loop, settings):
         self.loop = loop
-        self.identity = name if name else str(uuid.uuid1())
-
-        # TODO introduce the Controller facade
-        self.broker = Broker(self.loop)
-        self.inbound = Inbound(self.loop, self.hub_backend, self.identity,
-                               self.broker)
-        self.broker.connection_estabilished(self.inbound.start_receiving)
-        self.outbound = Outbound(self.loop, self.identity, self.broker)
+        self.settings = settings
+        self.task_pool = TaskPool(loop)
+        self.controller = Controller(loop, settings, self.task_pool)
 
     def start(self):
-        self.loop.create_task(self.inbound.start())
-        self.outbound.start()
+        self.controller.start()
 
     def stop(self):
-        self.inbound.stop()
-        self.outbound.stop()
+        self.controller.stop()
 
     @property
     def pid(self):
-        return self.hub_frontend, self.identity
+        return self.settings.hub_frontend, self.settings.identity
 
     async def recv(self, timeout=None):
-        payload = await self.inbound.recv(timeout=timeout)
+        payload = await self.controller.get_inbound(timeout=timeout)
         return pickle.loads(payload)
 
     async def send(self, name_or_pid, *args):
         payload = pickle.dumps(args)
         pid = resolve(name_or_pid)
-        await self.outbound.send(pid, payload)
+        await self.controller.put_outbound(pid, payload)
+
+
+@attr.s
+class Settings(object):
+    hub_frontend = attr.ib(default='127.0.0.1:5555')
+    hub_backend = attr.ib(default='/var/tmp/xwing.socket')
+    identity = attr.ib(default=attr.Factory(uuid.uuid1), convert=str)
 
 
 class Node(object):
 
-    def __init__(self, loop=None, hub_frontend='127.0.0.1',
-                 hub_backend='/var/tmp/xwing.socket'):
+    def __init__(self, loop=None, settings={}):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
-        self.hub_frontend = hub_frontend
-        self.hub_backend = hub_backend
-        self.mailbox_list = []
+        self.settings = Settings(**settings)
         self.tasks = []
 
 
@@ -84,13 +99,19 @@ def spawn(fn, *args, name=None, node=None):
     if not node:
         node = get_node_instance()
 
-    # Create a mailbox for my upper_actor and schedule it to run
-    mailbox = Mailbox(node.hub_frontend, node.hub_backend,
-                      node.loop, name)
+    if name:
+        node.settings.identity = name
+
+    mailbox = Mailbox(node.loop, node.settings)
     mailbox.start()
 
-    node.tasks.append(node.loop.create_task(fn(mailbox, *args)))
-    node.mailbox_list.append(mailbox)
+    task = node.loop.create_task(fn(mailbox, *args))
+    node.tasks.append(task)
+
+    def finish(process, fut):
+        process.set_exception(fut.exception())
+
+    mailbox.task_pool.add_exception_callback(partial(finish, task))
     return mailbox.pid
 
 
