@@ -1,5 +1,6 @@
 from xwing.network.transport.socket.client import Client
-from xwing.network.transport.stream import StreamConnection, DummyStreamConnection
+from xwing.network.transport.stream import (
+    StreamConnection, DummyStreamConnection)
 
 
 class StreamClient(Client):

@@ -28,6 +28,13 @@ class Inbound:
             except asyncio.TimeoutError:
                 continue
 
+            # FIXME shouldn't this raise an exception?
+            # As it is right now, it will stop looking for data as recv loop
+            # will stop. But the hearbeat loop of connection will keep running
+            # and eventually will raise an exception.
+            #
+            # If we raise an exception on recv loop, we wil known of a
+            # connection error sonner and have a more responsive system.
             if not data:  # connection is closed
                 break
 

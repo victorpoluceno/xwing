@@ -1,32 +1,30 @@
-import asyncio
-
 from xwing.network.transport.socket.server import Server
-from xwing.network.transport.stream import StreamConnection
+from xwing.network.transport.stream import (
+    StreamConnection, DummyStreamConnection)
 
 
 class StreamServer(Server):
 
     async def accept(self):
-        try:
-            stream_connection = StreamConnection(self.loop, await super(
-                StreamServer, self).accept())
-            await stream_connection.initialize()
-        except asyncio.TimeoutError:
-            return None
-
+        stream_connection = StreamConnection(self.loop, await super(
+            StreamServer, self).accept())
+        await stream_connection.initialize()
         return stream_connection
 
 
 class DummyStreamServer:
 
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, loop, settings):
+        self.loop = loop
+        self.settings = settings
 
     async def listen(self):
         return True
 
     async def accept(self):
-        return True
+        stream_connection = DummyStreamConnection(self.loop, None)
+        await stream_connection.initialize()
+        return stream_connection
 
 
 kind_map = {

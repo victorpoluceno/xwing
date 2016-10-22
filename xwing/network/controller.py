@@ -2,15 +2,14 @@ import asyncio
 
 from xwing.network.inbound import Inbound
 from xwing.network.outbound import Outbound, Connector
-from xwing.exceptions import MaxRetriesExceededError
-from xwing.network.transport.stream.server import get_stream_server
 from xwing.network.handshake import connect_handshake, accept_handshake
 from xwing.network.connection import Connection, Repository
 
 
 class Controller:
 
-    def __init__(self, loop, settings, task_pool, client_factory):
+    def __init__(self, loop, settings, task_pool, client_factory,
+                 server_factory):
         self.loop = loop
         self.task_pool = task_pool
         self.settings = settings
@@ -18,6 +17,7 @@ class Controller:
         self.inbound = Inbound(self.loop, settings)
         self.outbound = Outbound(self.loop, settings)
         self.client_factory = client_factory
+        self.server_factory = server_factory
         self.stop_event = asyncio.Event()
 
     def start(self, timeout=None):
@@ -45,30 +45,23 @@ class Controller:
             pid, data = item
             hub_frontend, remote_identity = pid
             if remote_identity not in self.repository:
-                try:
-                    stream = await connector.connect(pid)
-                except (MaxRetriesExceededError):
-                    continue
-                else:
-                    connection = Connection(self.loop, stream, self.task_pool)
-                    await connect_handshake(
-                        connection, local_identity=self.settings.identity)
+                stream = await connector.connect(pid)
+                connection = Connection(self.loop, stream, self.task_pool)
+                await connect_handshake(
+                    connection, local_identity=self.settings.identity)
 
-                    connection.start()
-                    self.repository.add(connection, remote_identity)
-                    self.start_receiver(connection)
+                connection.start()
+                self.repository.add(connection, remote_identity)
+                self.start_receiver(connection)
 
             connection = self.repository.get(remote_identity)
             connection.send(data)
 
     async def run_inbound(self):
-        stream_server = get_stream_server('real')(self.loop, self.settings)
+        stream_server = self.server_factory(self.loop, self.settings)
         await stream_server.listen()
         while not self.stop_event.is_set():
             stream = await stream_server.accept()
-            if not stream:
-                continue
-
             connection = Connection(self.loop, stream, self.task_pool)
             remote_identity = await accept_handshake(
                 connection, local_identity=self.settings.identity)

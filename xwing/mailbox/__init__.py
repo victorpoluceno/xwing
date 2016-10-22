@@ -2,12 +2,12 @@ import pickle
 import uuid
 import asyncio
 from functools import partial
-import asyncio
 
 import attr
 
 from xwing.network.controller import Controller
 from xwing.network.transport.stream.client import get_stream_client
+from xwing.network.transport.stream.server import get_stream_server
 
 
 def resolve(name_or_pid):
@@ -47,7 +47,8 @@ class Mailbox(object):
         self.settings = settings
         self.task_pool = TaskPool(loop)
         self.controller = Controller(loop, settings, self.task_pool,
-                                     get_stream_client('real'))
+                                     get_stream_client('real'),
+                                     get_stream_server('real'))
 
     def start(self):
         self.controller.start()

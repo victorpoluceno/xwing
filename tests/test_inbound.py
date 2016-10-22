@@ -48,3 +48,8 @@ class TestInbound:
     async def test_run_recv_loop_may_raise_timeout_error(self):
         syntetic_buffer.put(0.2)
         await self.inbound.run_recv_loop(self.connection, timeout=0.1)
+
+    @run_until_complete
+    async def test_run_recv_loop_break_connection(self):
+        syntetic_buffer.put(None)
+        await self.inbound.run_recv_loop(self.connection)

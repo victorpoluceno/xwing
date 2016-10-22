@@ -82,6 +82,8 @@ class Connection:
 
     async def recv(self):
         data = await self.stream.readline()
+        if data is None:
+            return data
 
         # TODO may be we can reduce this to one set, just time?
         self.liveness = INITIAL_HEARBEAT_LIVENESS
