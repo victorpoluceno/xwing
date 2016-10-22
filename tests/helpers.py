@@ -28,3 +28,17 @@ def run_once(f, return_value=None):
         return return_value
     wrapper.has_run = False
     return wrapper
+
+
+class SynteticBuffer:
+
+    def __init__(self):
+        self.buffer = []
+
+    def put(self, data):
+        self.buffer.append(data)
+
+    def pop(self):
+        return self.buffer.pop()
+
+syntetic_buffer = SynteticBuffer()

@@ -1,5 +1,5 @@
 from xwing.network.transport.socket.client import Client
-from xwing.network.transport.stream import StreamConnection
+from xwing.network.transport.stream import StreamConnection, DummyStreamConnection
 
 
 class StreamClient(Client):
@@ -19,8 +19,9 @@ class DummyStreamClient:
         self.identity = identity
 
     async def connect(self, service):
-        return True
-
+        stream_connection = DummyStreamConnection(self.loop, None)
+        await stream_connection.initialize()
+        return stream_connection
 
 kind_map = {
     'real': StreamClient,

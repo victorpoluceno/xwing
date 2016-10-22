@@ -7,6 +7,7 @@ import asyncio
 import attr
 
 from xwing.network.controller import Controller
+from xwing.network.transport.stream.client import get_stream_client
 
 
 def resolve(name_or_pid):
@@ -45,7 +46,8 @@ class Mailbox(object):
         self.loop = loop
         self.settings = settings
         self.task_pool = TaskPool(loop)
-        self.controller = Controller(loop, settings, self.task_pool)
+        self.controller = Controller(loop, settings, self.task_pool,
+                                     get_stream_client('real'))
 
     def start(self):
         self.controller.start()

@@ -1,5 +1,8 @@
 import asyncio
 
+from tests.helpers import syntetic_buffer
+
+
 async def connection_to_stream(connection, loop):
     return await asyncio.open_connection(sock=connection.sock,
                                          loop=loop)
@@ -31,18 +34,17 @@ class DummyStreamConnection:
     def __init__(self, loop, connection):
         self.loop = loop
         self.connection = connection
-        self.lines = []
-        self.sleep = None
 
     async def initialize(self):
         return True
 
     async def readline(self):
-        if self.sleep:
-            await asyncio.sleep(self.sleep)
+        data = syntetic_buffer.pop()
+        if isinstance(data, int) or isinstance(data, float):
+            await asyncio.sleep(data)
             return None
 
-        return self.lines.pop()
+        return data
 
     def write(self, data):
         return True

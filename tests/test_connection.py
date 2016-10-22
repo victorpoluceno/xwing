@@ -6,7 +6,7 @@ from xwing.exceptions import HeartbeatFailureError, ConnectionAlreadyExists
 from xwing.mailbox import TaskPool
 from xwing.network.connection import Connection, Repository
 from xwing.network.transport.stream import get_stream_connection
-from tests.helpers import run_until_complete
+from tests.helpers import run_until_complete, syntetic_buffer
 
 
 class TestRepository:
@@ -48,7 +48,7 @@ class TestConnection:
 
     @run_until_complete
     async def test_recv(self):
-        self.stream_connection.lines = [b'foo\n']
+        syntetic_buffer.put(b'foo\n')
         assert await self.connection.recv() == b'foo'
 
     @run_until_complete
@@ -56,5 +56,3 @@ class TestConnection:
         self.connection.liveness = 1
         with pytest.raises(HeartbeatFailureError):
             await self.connection.run_heartbeat_loop(heartbeat_interval=0.1)
-
-

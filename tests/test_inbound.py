@@ -5,7 +5,7 @@ from xwing.network.connection import get_connection
 from xwing.network.transport.stream import get_stream_connection
 from xwing.network.inbound import Inbound
 from xwing.mailbox import TaskPool
-from tests.helpers import run_once, run_until_complete
+from tests.helpers import run_once, run_until_complete, syntetic_buffer
 
 
 class TestInbound:
@@ -34,7 +34,7 @@ class TestInbound:
 
     @run_until_complete
     async def test_run_recv_loop(self):
-        self.stream_connection.lines = [b'foo\n']
+        syntetic_buffer.put(b'foo\n')
         await self.inbound.run_recv_loop(self.connection)
         assert await self.inbound.get() == b'foo'
 
@@ -46,5 +46,5 @@ class TestInbound:
 
     @run_until_complete
     async def test_run_recv_loop_may_raise_timeout_error(self):
-        self.stream_connection.sleep = 0.2
+        syntetic_buffer.put(0.2)
         await self.inbound.run_recv_loop(self.connection, timeout=0.1)

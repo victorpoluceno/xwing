@@ -4,27 +4,28 @@ from xwing.network.inbound import Inbound
 from xwing.network.outbound import Outbound, Connector
 from xwing.exceptions import MaxRetriesExceededError
 from xwing.network.transport.stream.server import get_stream_server
-from xwing.network.transport.stream.client import get_stream_client
 from xwing.network.handshake import connect_handshake, accept_handshake
 from xwing.network.connection import Connection, Repository
 
 
 class Controller:
 
-    def __init__(self, loop, settings, task_pool):
+    def __init__(self, loop, settings, task_pool, client_factory):
         self.loop = loop
         self.task_pool = task_pool
         self.settings = settings
         self.repository = Repository()
         self.inbound = Inbound(self.loop, settings)
         self.outbound = Outbound(self.loop, settings)
+        self.client_factory = client_factory
         self.stop_event = asyncio.Event()
 
-    def start(self):
+    def start(self, timeout=None):
         self.task_pool.create_task(self.run_inbound())
-        self.task_pool.create_task(self.run_outbound())
+        self.task_pool.create_task(self.run_outbound(timeout=timeout))
 
     def stop(self):
+        self.stop_event.set()
         self.inbound.stop()
 
     async def get_inbound(self, *args, **kwargs):
@@ -33,11 +34,11 @@ class Controller:
     async def put_outbound(self, *args, **kwargs):
         return await self.outbound.put(*args, **kwargs)
 
-    async def run_outbound(self):
+    async def run_outbound(self, timeout=None):
         connector = Connector(self.loop, self.settings,
-                              get_stream_client('real'))
+                              self.client_factory)
         while not self.stop_event.is_set():
-            item = await self.outbound.get()
+            item = await self.outbound.get(timeout=timeout)
             if not item:
                 continue
 
