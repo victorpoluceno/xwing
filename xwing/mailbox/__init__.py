@@ -2,6 +2,7 @@ import pickle
 import uuid
 import asyncio
 from functools import partial
+import asyncio
 
 import attr
 
@@ -105,7 +106,17 @@ def spawn(fn, *args, name=None, node=None):
     mailbox = Mailbox(node.loop, node.settings)
     mailbox.start()
 
-    task = node.loop.create_task(fn(mailbox, *args))
+    # FIXME right now we need this to make sure that
+    # the finished messages is sent before the actor
+    # exit and its mailbox gets garbaged. How does
+    # Erlang fix this problem?
+
+    async def wrap(fn, mailbox, *args):
+        ret = await fn(mailbox, *args)
+        await asyncio.sleep(0.1)
+        return ret
+
+    task = node.loop.create_task(wrap(fn, mailbox, *args))
     node.tasks.append(task)
 
     def finish(process, fut):
