@@ -1,4 +1,4 @@
-from xwing.socket.backend.rfc1078 import send, recv
+from xwing.network.transport.socket.backend.rfc1078 import send, recv
 
 
 class Connection:

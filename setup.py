@@ -13,6 +13,7 @@ setup(
     packages=['xwing'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
+    install_requires=['attrs==16.2.0'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',

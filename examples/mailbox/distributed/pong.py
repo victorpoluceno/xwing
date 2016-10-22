@@ -14,7 +14,6 @@ async def pong(mailbox):
 
 
 if __name__ == '__main__':
-    # python examples/mailbox/distributed/pong.py
     init_node()
     spawn(pong, name='pong')
     start_node()

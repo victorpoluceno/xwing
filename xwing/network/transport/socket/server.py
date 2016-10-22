@@ -1,9 +1,8 @@
 import logging
-import uuid
 import asyncio
 
-from xwing.socket import Connection
-from xwing.socket.backend.rfc1078 import accept, listen
+from xwing.network.transport.socket import Connection
+from xwing.network.transport.socket.backend.rfc1078 import accept, listen
 
 log = logging.getLogger(__name__)
 
@@ -30,15 +29,16 @@ class Server(object):
       >>> conn.send(data)
     '''
 
-    def __init__(self, loop, multiplex_endpoint, identity=None):
+    def __init__(self, loop, settings):
         self.loop = loop
-        self.multiplex_endpoint = multiplex_endpoint
-        self.identity = str(uuid.uuid1()) if not identity else identity
+        self.settings = settings
         self.reconnecting = False
 
     async def listen(self):
-        self.sock = await listen(self.loop, self.multiplex_endpoint,
-                                 self.identity)
+        self.sock = await listen(self.loop, self.settings.hub_backend,
+                                 self.settings.identity)
+        log.info('%s is listening.' % self.settings.identity)
+        return True
 
     async def reconnect(self):
         self.reconnecting = True
