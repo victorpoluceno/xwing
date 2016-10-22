@@ -6,14 +6,12 @@ xwing
 
 |
 
-Python based *asyncio* Actor Framework.
-
-**xwing** is a full featured actor framework inspired by Erlang's design. 
+**xwing** is Actor based Python concurrency framework that uses *asyncio* and Concurrent Oriented Programming ideas, inspired by Erlang's design.
 
 Features
 --------
 
-* Simple. Ships with a minimal for humans actor API.
+* Simple. Ships with a minimal for humans Actor API.
 * Fast. Message multiplexing implemented by routing connections, not data.
 * Powerful. Based and inspired by the battle tested Erlang's actor design.
 * High level. Allow developers to write applications without worrying too much about low level details.
@@ -55,10 +53,14 @@ Roadmap
 
 Features planned to *0.1* release:
 
-* Task Scheduler with SMP support.
-* Auto start of Xwing Hub on Node start.
-* Heartbeat for connection check and keepalive.
-* Full tested and benchmarked uvloop support.
+* Basic Actor functions: spawn, send and recv [DONE].
+* Heartbeat for connection check and keepalive [DONE].
+* Full remote communication support with multiplexing and port mapper. [DONE]
+* One connection per connected actor. [DONE]
+* Auto start of Xwing Hub on Node start. [NOT STARTED]
+* Fault isolation between actors. [NOT STARTED]
+* Task Scheduler with SMP support. [NOT STARTED]
+* Full tested and benchmarked uvloop support. [IN PROGRESS]
 
 Development
 ----------
