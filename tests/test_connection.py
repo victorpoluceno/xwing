@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from xwing.exceptions import HeartbeatFailureError, ConnectionAlreadyExists
-from xwing.mailbox import TaskPool
+from xwing.concurrency import TaskPool
 from xwing.network.connection import Connection, Repository, HEARTBEAT_SIGNAL
 from xwing.network.transport.stream import get_stream_connection
 from tests.helpers import run_until_complete, syntetic_buffer

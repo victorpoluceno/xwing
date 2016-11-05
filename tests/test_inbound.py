@@ -1,10 +1,10 @@
 import asyncio
 
-from xwing.mailbox import Settings
+from xwing.node import Settings
 from xwing.network.connection import get_connection
 from xwing.network.transport.stream import get_stream_connection
 from xwing.network.inbound import Inbound
-from xwing.mailbox import TaskPool
+from xwing.concurrency import TaskPool
 from tests.helpers import run_once, run_until_complete, syntetic_buffer
 
 

@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from xwing.exceptions import MaxRetriesExceededError
-from xwing.mailbox import Settings
+from xwing.node import Settings
 from xwing.network.outbound import Outbound, Connector
 from xwing.network.transport.stream.client import get_stream_client
 from tests.helpers import run_until_complete, make_coro_mock

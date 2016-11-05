@@ -1,6 +1,6 @@
 import logging
 
-from xwing.mailbox import initialize, spawn, start
+from xwing.node import initialize, spawn, start
 initialize()
 
 logging.basicConfig(level='INFO')

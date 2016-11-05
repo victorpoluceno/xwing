@@ -3,7 +3,8 @@ import asyncio
 from xwing.network.controller import Controller
 from xwing.network.transport.stream.client import get_stream_client
 from xwing.network.transport.stream.server import get_stream_server
-from xwing.mailbox import TaskPool, Settings
+from xwing.concurrency import TaskPool
+from xwing.node import Settings
 from xwing.network.handshake import HANDSHAKE_ACK_SIGNAL
 from tests.helpers import run_until_complete, run_once, syntetic_buffer
 

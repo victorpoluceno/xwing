@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 import pytest
 
-from xwing.mailbox import init_node, start_node, spawn
+from xwing.node import init_node, start_node, spawn
 from xwing.network.transport.socket.client import Client
 
 FRONTEND_ADDRESS = '127.0.0.1:5555'

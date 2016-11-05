@@ -23,7 +23,7 @@ Sample
 
 .. code-block:: python
 
-    from xwing.mailbox import init_node, start_node, spawn
+    from xwing.node import init_node, start_node, spawn
 
     async def pong(mailbox):
         message, pid = await mailbox.recv()

@@ -2,7 +2,7 @@ import time
 import logging
 from concurrent import futures
 
-from xwing.mailbox import initialize, spawn, run, get_node_instance
+from xwing.node import initialize, spawn, run, get_node_instance
 initialize()
 
 logging.basicConfig(level='INFO')

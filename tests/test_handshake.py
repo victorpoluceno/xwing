@@ -6,7 +6,7 @@ from xwing.exceptions import HandshakeTimeoutError, HandshakeProtocolError
 from xwing.network.handshake import (
     connect_handshake, accept_handshake, HANDSHAKE_ACK_SIGNAL)
 from xwing.network.transport.stream import get_stream_connection
-from xwing.mailbox import TaskPool
+from xwing.concurrency import TaskPool
 from xwing.network.connection import get_connection
 from tests.helpers import run_until_complete, syntetic_buffer
 
