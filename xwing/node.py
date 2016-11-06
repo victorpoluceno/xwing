@@ -62,7 +62,8 @@ def spawn(fn, *args, name=None, node=None):
     def finish(process, fut):
         process.set_exception(fut.exception())
 
-    mailbox.task_pool.add_exception_callback(partial(finish, task))
+    task_set = mailbox.get_taskset()
+    task_set.add_exception_callback(partial(finish, task))
     return mailbox.pid
 
 

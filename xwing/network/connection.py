@@ -45,15 +45,15 @@ class Repository:
 
 class Connection:
 
-    def __init__(self, loop, stream, task_pool):
+    def __init__(self, loop, stream, taskset):
         self.loop = loop
         self.stream = stream
-        self.task_pool = task_pool
+        self.taskset = taskset
         self.liveness = INITIAL_HEARBEAT_LIVENESS
         self.stop_event = asyncio.Event()
 
     def start(self):
-        self.task_pool.create_task(self.run_heartbeat_loop())
+        self.taskset.create_task(self.run_heartbeat_loop())
 
     async def run_heartbeat_loop(self, heartbeat_interval=5):
         self.start_time = time.time()

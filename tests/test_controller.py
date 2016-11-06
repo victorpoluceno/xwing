@@ -3,7 +3,7 @@ import asyncio
 from xwing.network.controller import Controller
 from xwing.network.transport.stream.client import get_stream_client
 from xwing.network.transport.stream.server import get_stream_server
-from xwing.concurrency import TaskPool
+from xwing.concurrency.taskset import TaskSet
 from xwing.node import Settings
 from xwing.network.handshake import HANDSHAKE_ACK_SIGNAL
 from tests.helpers import run_until_complete, run_once, syntetic_buffer
@@ -14,9 +14,9 @@ class TestController:
     def setup_method(self, method):
         self.loop = asyncio.get_event_loop()
         self.settings = Settings()
-        self.task_pool = TaskPool(self.loop)
+        self.taskset = TaskSet(self.loop)
         self.controller = Controller(
-            self.loop, self.settings, self.task_pool,
+            self.loop, self.settings, self.taskset,
             get_stream_client('dummy'),
             get_stream_server('dummy'))
         self.controller.stop_event.is_set = run_once(

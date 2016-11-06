@@ -1,5 +1,6 @@
 import pickle
 
+from xwing.concurrency.taskset import TaskSet
 from xwing.network.controller import Controller
 from xwing.network.transport.stream.client import get_stream_client
 from xwing.network.transport.stream.server import get_stream_server
@@ -16,34 +17,18 @@ def resolve(name_or_pid):
     return name_or_pid
 
 
-class TaskPool:
-
-    def __init__(self, loop):
-        self.loop = loop
-        self.callbacks = []
-
-    def create_task(self, fn):
-        fut = self.loop.create_task(fn)
-        fut.add_done_callback(self.done_callback)
-
-    def done_callback(self, fut):
-        if not fut.cancelled() and fut.exception:
-            for callback in self.callbacks:
-                callback(fut)
-
-    def add_exception_callback(self, callback):
-        self.callbacks.append(callback)
-
-
 class Mailbox(object):
 
     def __init__(self, loop, settings):
         self.loop = loop
         self.settings = settings
-        self.task_pool = TaskPool(loop)
-        self.controller = Controller(loop, settings, self.task_pool,
+        self.task_set = TaskSet(loop)
+        self.controller = Controller(loop, settings, self.task_set,
                                      get_stream_client('real'),
                                      get_stream_server('real'))
+
+    def get_taskset(self):
+        return self.taskset
 
     def start(self):
         self.controller.start()

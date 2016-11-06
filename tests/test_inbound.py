@@ -4,7 +4,7 @@ from xwing.node import Settings
 from xwing.network.connection import get_connection
 from xwing.network.transport.stream import get_stream_connection
 from xwing.network.inbound import Inbound
-from xwing.concurrency import TaskPool
+from xwing.concurrency.taskset import TaskSet
 from tests.helpers import run_once, run_until_complete, syntetic_buffer
 
 
@@ -19,9 +19,9 @@ class TestInbound:
 
         self.stream_connection = get_stream_connection('dummy')(
             self.loop, None)
-        self.task_pool = TaskPool(self.loop)
+        self.taskset = TaskSet(self.loop)
         self.connection = get_connection('real')(
-            self.loop, self.stream_connection, self.task_pool)
+            self.loop, self.stream_connection, self.taskset)
 
     @run_until_complete
     async def test_get_with_timeout_error(self):

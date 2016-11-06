@@ -8,11 +8,11 @@ from xwing.network.connection import Connection, Repository
 
 class Controller:
 
-    def __init__(self, loop, settings, task_pool, client_factory,
+    def __init__(self, loop, settings, taskset, client_factory,
                  server_factory):
         self.loop = loop
-        self.task_pool = task_pool
         self.settings = settings
+        self.taskset = taskset
         self.repository = Repository()
         self.inbound = Inbound(self.loop, settings)
         self.outbound = Outbound(self.loop, settings)
@@ -21,8 +21,8 @@ class Controller:
         self.stop_event = asyncio.Event()
 
     def start(self, timeout=None):
-        self.task_pool.create_task(self.run_inbound())
-        self.task_pool.create_task(self.run_outbound(timeout=timeout))
+        self.taskset.create_task(self.run_inbound())
+        self.taskset.create_task(self.run_outbound(timeout=timeout))
 
     def stop(self):
         self.stop_event.set()
@@ -46,7 +46,7 @@ class Controller:
             hub_frontend, remote_identity = pid
             if remote_identity not in self.repository:
                 stream = await connector.connect(pid)
-                connection = Connection(self.loop, stream, self.task_pool)
+                connection = Connection(self.loop, stream, self.taskset)
                 await connect_handshake(
                     connection, local_identity=self.settings.identity)
 
@@ -62,7 +62,7 @@ class Controller:
         await stream_server.listen()
         while not self.stop_event.is_set():
             stream = await stream_server.accept()
-            connection = Connection(self.loop, stream, self.task_pool)
+            connection = Connection(self.loop, stream, self.taskset)
             remote_identity = await accept_handshake(
                 connection, local_identity=self.settings.identity)
 
@@ -71,5 +71,5 @@ class Controller:
             self.start_receiver(connection)
 
     def start_receiver(self, connection, timeout=5.0):
-        self.task_pool.create_task(self.inbound.run_recv_loop(
+        self.taskset.create_task(self.inbound.run_recv_loop(
             connection, timeout / 5))

@@ -6,7 +6,7 @@ from xwing.exceptions import HandshakeTimeoutError, HandshakeProtocolError
 from xwing.network.handshake import (
     connect_handshake, accept_handshake, HANDSHAKE_ACK_SIGNAL)
 from xwing.network.transport.stream import get_stream_connection
-from xwing.concurrency import TaskPool
+from xwing.concurrency.taskset import TaskSet
 from xwing.network.connection import get_connection
 from tests.helpers import run_until_complete, syntetic_buffer
 
@@ -17,10 +17,10 @@ class TestHandshake:
         self.loop = asyncio.get_event_loop()
         self.stream_connection = get_stream_connection('dummy')(
             self.loop, None)
-        self.task_pool = TaskPool(self.loop)
+        self.taskset = TaskSet(self.loop)
         self.connection = get_connection('real')(self.loop,
                                                  self.stream_connection,
-                                                 self.task_pool)
+                                                 self.taskset)
 
     @run_until_complete
     async def test_connect_handshake(self):

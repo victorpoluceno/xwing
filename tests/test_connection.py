@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from xwing.exceptions import HeartbeatFailureError, ConnectionAlreadyExists
-from xwing.concurrency import TaskPool
+from xwing.concurrency.taskset import TaskSet
 from xwing.network.connection import Connection, Repository, HEARTBEAT_SIGNAL
 from xwing.network.transport.stream import get_stream_connection
 from tests.helpers import run_until_complete, syntetic_buffer
@@ -39,9 +39,9 @@ class TestConnection:
         self.loop = asyncio.get_event_loop()
         self.stream_connection = get_stream_connection('dummy')(
             self.loop, None)
-        self.task_pool = TaskPool(self.loop)
+        self.taskset = TaskSet(self.loop)
         self.connection = Connection(self.loop, self.stream_connection,
-                                     self.task_pool)
+                                     self.taskset)
 
     def test_send(self):
         assert self.connection.send(b'foo') == b'foo'
